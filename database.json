@@ -1,0 +1,89 @@
+{
+  "categories": [
+    { "id": "cat_1", "name": "Dọn dẹp nhà cửa", "slug": "don-dep-nha", "icon": "cleaning_services", "color": "#FF5733" },
+    { "id": "cat_2", "name": "Sửa đồ gia dụng", "slug": "sua-do-gia-dung", "icon": "build", "color": "#33FF57" },
+    { "id": "cat_3", "name": "Điện nước", "slug": "dien-nuoc", "icon": "plumbing", "color": "#3357FF" },
+    { "id": "cat_4", "name": "Vệ sinh máy lạnh", "slug": "ve-sinh-may-lanh", "icon": "ac_unit", "color": "#FF33E9" }
+  ],
+  "providers": [
+    {
+      "id": "p_101",
+      "title": "Sửa Chữa Điện Nước", 
+      "name": "Nguyễn Văn Tuấn",
+      "category_id": "cat_3",
+      "avatar": "https://i.pravatar.cc/150?u=p_101",
+      "cover_image": "https://picsum.photos/seed/p101/600/300",
+      "bio": "Chuyên gia điện nước hơn 10 năm kinh nghiệm tại TP.HCM. Nhiệt tình, tận tâm, giá cả minh bạch.",
+      "rating": 4.9,
+      "total_reviews": 156,
+      "completed_jobs": 420,
+      "is_verified": true,
+      "skills": ["Sửa ống nước", "Lắp điện âm tường", "Sửa máy bơm"],
+      "work_area": ["Quận 1", "Quận 3", "Bình Thạnh"],
+      "status": "available",
+      "price_per_hour": 200000,
+      "available_workers": 5 
+    },
+    {
+      "id": "p_102",
+      "title": "Dọn Dẹp Nhà Cửa", 
+      "name": "Trần Thị Lan",
+      "category_id": "cat_1",
+      "avatar": "https://i.pravatar.cc/150?u=p_102",
+      "cover_image": "https://picsum.photos/seed/p102/600/300",
+      "bio": "Dọn dẹp nhà cửa theo giờ, sạch sẽ, tỉ mỉ, có lý lịch rõ ràng.",
+      "rating": 4.7,
+      "total_reviews": 89,
+      "completed_jobs": 120,
+      "is_verified": true,
+      "skills": ["Dọn nhà", "Ủi đồ", "Nấu ăn gia đình"],
+      "work_area": ["Quận 7", "Quận 4", "Nhà Bè"],
+      "status": "busy",
+      "price_per_hour": 100000,
+      "available_workers": 2 
+    }
+  ],
+  "reviews": [
+    {
+      "id": "rev_001",
+      "provider_id": "p_101",
+      "user_id": "u_501",
+      "user_name": "Lê Minh",
+      "user_avatar": "https://i.pravatar.cc/150?u=u501",
+      "rating": 5,
+      "comment": "Anh Tuấn làm rất kỹ, sửa xong còn dọn dẹp sạch sẽ khu vực làm việc. 5 sao!",
+      "images": ["https://picsum.photos/200/200?random=1", "https://picsum.photos/200/200?random=2"],
+      "created_at": "2024-05-20T08:30:00Z"
+    }
+  ],
+  "bookings": [
+    {
+      "id": "BK_2024_001",
+      "user_id": "u_501",
+      "provider_id": "p_101",
+      "service_name": "Sửa ống nước bồn rửa bát",
+      "schedule_time": "2024-05-22T14:00:00Z",
+      "address": {
+        "street": "456 Lê Lợi",
+        "district": "Quận 1",
+        "city": "TP.HCM"
+      },
+      "total_price": 250000,
+      "payment_method": "COD",
+      "status": "confirmed",
+      "has_reviewed": false,
+      "notes": "Nhà có chó dữ, vui lòng gọi điện trước khi đến."
+    }
+  ],
+  "notifications": [
+    {
+      "id": "nt_1",
+      "user_id": "u_501",
+      "title": "Đơn hàng đã được xác nhận",
+      "content": "Thợ Nguyễn Văn Tuấn đã xác nhận lịch hẹn vào lúc 14:00 ngày 22/05.",
+      "is_read": false,
+      "type": "booking_update",
+      "created_at": "2024-05-21T09:00:00Z"
+    }
+  ]
+}
