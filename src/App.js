@@ -7,6 +7,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import ForgotPassword from './components/ForgotPassword';
 import Service from './components/Service';
+import ServiceDetail from './components/ServiceDetail';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route path="/Login" element={<Login />} />
           <Route path="/Register" element={<Register/>} />
           <Route path="/ForgotPassword" element={<ForgotPassword />} />
+          <Route path="/service/:id" element={<ServiceDetail />} />
         </Routes>
 
         {/* Footer luôn hiện ở đáy */}

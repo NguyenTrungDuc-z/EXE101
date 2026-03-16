@@ -1,12 +1,53 @@
-import React from 'react';
-
-import { Search, BadgeCheck, Brush, Zap, Wrench, Refrigerator, Star, ChevronRight, Clock, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Search, BadgeCheck, Brush, Zap, Wrench, Refrigerator, Snowflake,
+  Star, ChevronRight, Clock, ShieldCheck, LayoutGrid
+} from 'lucide-react';
 import './HomePage.css';
 
+// Hàm hỗ trợ render Icon cho Danh mục
+const getCategoryIcon = (iconString) => {
+  switch (iconString) {
+    case 'cleaning_services': return <Brush size={28} />;
+    case 'build': return <Wrench size={28} />;
+    case 'plumbing': return <Zap size={28} />;
+    case 'ac_unit': return <Snowflake size={28} />; // Dùng Snowflake thay cho Refrigerator
+    default: return <LayoutGrid size={28} />;
+  }
+};
+
 export default function HomePage() {
+  // 1. STATE LƯU TRỮ DỮ LIỆU TỪ API
+  const [categories, setCategories] = useState([]);
+  const [featuredProviders, setFeaturedProviders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 2. GỌI API TỪ JSON-SERVER (Cổng 9999)
+  useEffect(() => {
+    Promise.all([
+      fetch('http://localhost:9999/categories').then(res => res.json()),
+      fetch('http://localhost:9999/providers').then(res => res.json())
+    ])
+    .then(([catData, provData]) => {
+      // Lấy 4 danh mục đầu tiên cho mục Dịch vụ phổ biến
+      setCategories(catData.slice(0, 4)); 
+      
+      // Lấy 3 thợ có đánh giá cao nhất cho mục Thợ nổi bật
+      const topProviders = provData
+        .sort((a, b) => b.rating - a.rating)
+        .slice(0, 3);
+      setFeaturedProviders(topProviders);
+      
+      setIsLoading(false);
+    })
+    .catch(error => {
+      console.error("Lỗi khi tải dữ liệu trang chủ:", error);
+      setIsLoading(false);
+    });
+  }, []);
+
   return (
     <div className="homepage-wrapper">
-      
       
       {/* KHỐI 1: HERO SECTION */}
       <section className="hero-container">
@@ -45,31 +86,22 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* KHỐI 2: DỊCH VỤ PHỔ BIẾN */}
+      {/* KHỐI 2: DỊCH VỤ PHỔ BIẾN (GỌI TỪ API) */}
       <section className="services-section">
         <h2 className="section-title">Dịch vụ phổ biến</h2>
-        <div className="services-grid">
-          <div className="service-card">
-            <div className="service-icon"><Brush size={28} /></div>
-            <h3>Dọn dẹp nhà</h3>
-            <p>Định kỳ hoặc theo giờ</p>
+        {isLoading ? (
+          <p style={{textAlign: 'center', padding: '20px'}}>Đang tải dịch vụ...</p>
+        ) : (
+          <div className="services-grid">
+            {categories.map((cat) => (
+              <div className="service-card" key={cat.id}>
+                <div className="service-icon">{getCategoryIcon(cat.icon)}</div>
+                <h3>{cat.name}</h3>
+                <p>{cat.description || "Dịch vụ chuyên nghiệp"}</p>
+              </div>
+            ))}
           </div>
-          <div className="service-card">
-            <div className="service-icon"><Zap size={28} /></div>
-            <h3>Điện nước</h3>
-            <p>Xử lý sự cố nhanh 24/7</p>
-          </div>
-          <div className="service-card">
-            <div className="service-icon"><Wrench size={28} /></div>
-            <h3>Lắp đặt</h3>
-            <p>Nội thất và thiết bị</p>
-          </div>
-          <div className="service-card">
-            <div className="service-icon"><Refrigerator size={28} /></div>
-            <h3>Điện máy</h3>
-            <p>Máy giặt, tủ lạnh, TV</p>
-          </div>
-        </div>
+        )}
       </section>
 
       {/* KHỐI 3: CÁCH THỨC HOẠT ĐỘNG */}
@@ -99,7 +131,7 @@ export default function HomePage() {
       </section>
 
       {/* ========================================= */}
-      {/* KHỐI 4: THỢ NỔI BẬT (MỚI) */}
+      {/* KHỐI 4: THỢ NỔI BẬT (GỌI TỪ API) */}
       {/* ========================================= */}
       <section className="featured-providers-section">
         <div className="section-header-flex">
@@ -110,76 +142,56 @@ export default function HomePage() {
           <a href="#xem-tat-ca" className="view-all-link">Xem tất cả <ChevronRight size={18} /></a>
         </div>
 
-        <div className="providers-grid">
-          {/* Card Thợ 1 */}
-          <div className="provider-card">
-            <div className="provider-cover" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=400&auto=format&fit=crop')" }}>
-              <span className="badge">Ưu tú</span>
-            </div>
-            <div className="provider-info">
-              <img src="https://i.pravatar.cc/150?img=11" alt="Nguyễn Văn Hùng" className="provider-avatar" />
-              <h3>Nguyễn Văn Hùng</h3>
-              <p className="specialty">Chuyên gia Điện nước • 8 năm KN</p>
-              <div className="rating">
-                <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                <span className="rating-score">5.0</span>
-                <span className="rating-count">(124)</span>
+        {isLoading ? (
+          <p style={{textAlign: 'center', padding: '20px'}}>Đang tải danh sách thợ...</p>
+        ) : (
+          <div className="providers-grid">
+            {featuredProviders.map((provider) => (
+              <div className="provider-card" key={provider.id}>
+                
+                {/* Ảnh bìa */}
+                <div 
+                  className="provider-cover" 
+                  style={{ backgroundImage: `url(${provider.cover_image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                >
+                  {provider.is_verified && <span className="badge">Được xác minh</span>}
+                </div>
+                
+                {/* Thông tin thợ */}
+                <div className="provider-info">
+                  {/* Nếu JSON không có avatar, dùng API tạo avatar từ tên */}
+                  <img 
+                    src={provider.avatar_url || `https://ui-avatars.com/api/?name=${provider.name}&background=2563eb&color=fff`} 
+                    alt={provider.name} 
+                    className="provider-avatar" 
+                  />
+                  <h3>{provider.name}</h3>
+                  <p className="specialty">{provider.title || "Chuyên gia dịch vụ"} • {provider.experience_years || 5} năm KN</p>
+                  
+                  {/* Render Sao tự động dựa theo rating */}
+                  <div className="rating">
+                    {[...Array(5)].map((_, index) => (
+                      <Star 
+                        key={index} 
+                        size={16} 
+                        fill={index < Math.round(provider.rating) ? "#fbbf24" : "none"} 
+                        color={index < Math.round(provider.rating) ? "#fbbf24" : "#d1d5db"} 
+                      />
+                    ))}
+                    <span className="rating-score">{provider.rating}</span>
+                    <span className="rating-count">({provider.total_reviews})</span>
+                  </div>
+                  
+                  <button className="view-profile-btn">Xem hồ sơ</button>
+                </div>
               </div>
-              <button className="view-profile-btn">Xem hồ sơ</button>
-            </div>
+            ))}
           </div>
-
-          {/* Card Thợ 2 */}
-          <div className="provider-card">
-            <div className="provider-cover" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1484154218962-a197022b5858?q=80&w=400&auto=format&fit=crop')" }}>
-              <span className="badge">Được xác minh</span>
-            </div>
-            <div className="provider-info">
-              <img src="https://i.pravatar.cc/150?img=5" alt="Lê Thị Lan" className="provider-avatar" />
-              <h3>Lê Thị Lan</h3>
-              <p className="specialty">Chuyên gia Dọn dẹp • 5 năm KN</p>
-              <div className="rating">
-                <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                <Star size={16} color="#fbbf24" /> {/* Sao rỗng */}
-                <span className="rating-score">4.8</span>
-                <span className="rating-count">(89)</span>
-              </div>
-              <button className="view-profile-btn">Xem hồ sơ</button>
-            </div>
-          </div>
-
-          {/* Card Thợ 3 */}
-          <div className="provider-card">
-            <div className="provider-cover" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1556911220-e15b29be8c8f?q=80&w=400&auto=format&fit=crop')" }}>
-            </div>
-            <div className="provider-info">
-              <img src="https://i.pravatar.cc/150?img=12" alt="Trần Minh Tâm" className="provider-avatar" />
-              <h3>Trần Minh Tâm</h3>
-              <p className="specialty">Kỹ thuật viên Điện máy • 10 năm KN</p>
-              <div className="rating">
-                <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                <span className="rating-score">4.9</span>
-                <span className="rating-count">(215)</span>
-              </div>
-              <button className="view-profile-btn">Xem hồ sơ</button>
-            </div>
-          </div>
-        </div>
+        )}
       </section>
 
       {/* ========================================= */}
-      {/* KHỐI 5: TẠI SAO CHỌN (MỚI) */}
+      {/* KHỐI 5: TẠI SAO CHỌN */}
       {/* ========================================= */}
       <section className="why-choose-us-section">
         <div className="hiw-header">
@@ -206,7 +218,7 @@ export default function HomePage() {
       </section>
 
       {/* ========================================= */}
-      {/* KHỐI 6: CTA SẴN SÀNG BẮT ĐẦU (MỚI) */}
+      {/* KHỐI 6: CTA SẴN SÀNG BẮT ĐẦU */}
       {/* ========================================= */}
       <section className="cta-section">
         <h2>Sẵn Sàng Bắt Đầu?</h2>
@@ -218,7 +230,7 @@ export default function HomePage() {
       </section>
 
       {/* ========================================= */}
-      {/* KHỐI 7: THỐNG KÊ (MỚI) */}
+      {/* KHỐI 7: THỐNG KÊ */}
       {/* ========================================= */}
       <section className="stats-section">
         <div className="stat-item">

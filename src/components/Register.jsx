@@ -128,10 +128,7 @@ export default function Register() {
               <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" alt="Google" className="social-icon" />
               Google
             </button>
-            <button className="btn-social">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Facebook_Logo_%282019%29.png/1024px-Facebook_Logo_%282019%29.png" alt="Facebook" className="social-icon" />
-              Facebook
-            </button>
+           
           </div>
 
         </div>

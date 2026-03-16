@@ -8,6 +8,7 @@
   "providers": [
     {
       "id": "p_101",
+      "title": "Sửa Chữa Điện Nước", 
       "name": "Nguyễn Văn Tuấn",
       "category_id": "cat_3",
       "avatar": "https://i.pravatar.cc/150?u=p_101",
@@ -20,10 +21,12 @@
       "skills": ["Sửa ống nước", "Lắp điện âm tường", "Sửa máy bơm"],
       "work_area": ["Quận 1", "Quận 3", "Bình Thạnh"],
       "status": "available",
-      "price_per_hour": 200000
+      "price_per_hour": 200000,
+      "available_workers": 5 
     },
     {
       "id": "p_102",
+      "title": "Dọn Dẹp Nhà Cửa", 
       "name": "Trần Thị Lan",
       "category_id": "cat_1",
       "avatar": "https://i.pravatar.cc/150?u=p_102",
@@ -36,7 +39,8 @@
       "skills": ["Dọn nhà", "Ủi đồ", "Nấu ăn gia đình"],
       "work_area": ["Quận 7", "Quận 4", "Nhà Bè"],
       "status": "busy",
-      "price_per_hour": 100000
+      "price_per_hour": 100000,
+      "available_workers": 2 
     }
   ],
   "reviews": [
