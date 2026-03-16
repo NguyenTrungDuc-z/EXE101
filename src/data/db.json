@@ -1,0 +1,461 @@
+﻿{
+  "stats": {
+    "totalUsers": 128240,
+    "totalEmployers": 8420,
+    "totalJobs": 24918,
+    "totalCandidates": 62310,
+    "totalRevenue": "12.4 tỷ",
+    "jobsToday": 128,
+    "activeJobs": 642,
+    "pendingApprovals": 23,
+    "verifiedEmployers": 87,
+    "hotCategories": 6,
+    "avgFillHours": 9.4
+  },
+  "users": [
+    {
+      "id": "u_501",
+      "name": "Lê Minh",
+      "phone": "0902 888 121",
+      "email": "le.minh@example.com",
+      "address": "Quận 1, TP.HCM"
+    },
+    {
+      "id": "u_502",
+      "name": "Trần Thanh",
+      "phone": "0938 340 900",
+      "email": "tran.thanh@example.com",
+      "address": "Quận 7, TP.HCM"
+    },
+    {
+      "id": "u_503",
+      "name": "Hoàng Minh",
+      "phone": "0906 552 818",
+      "email": "hoang.minh@example.com",
+      "address": "Thủ Đức, TP.HCM"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "JOB-2401",
+      "title": "Sửa ống nước bồn rửa bát",
+      "category": "Điện nước",
+      "location": "Quận 1, TP.HCM",
+      "pay": "250k/ca",
+      "status": "Pending",
+      "postedAt": "2026-03-12",
+      "employer": "Lê Minh",
+      "slots": 1,
+      "priority": "High",
+      "notes": "Cần thợ trong ngày"
+    },
+    {
+      "id": "JOB-2398",
+      "title": "Dọn dẹp nhà cửa",
+      "category": "Dọn dẹp nhà cửa",
+      "location": "Quận 7, TP.HCM",
+      "pay": "200k/ca",
+      "status": "Approved",
+      "postedAt": "2026-03-11",
+      "employer": "Trần Thanh",
+      "slots": 2,
+      "priority": "Medium",
+      "notes": "Cần người nhanh gọn"
+    },
+    {
+      "id": "JOB-2395",
+      "title": "Vệ sinh máy lạnh",
+      "category": "Vệ sinh máy lạnh",
+      "location": "Thủ Đức, TP.HCM",
+      "pay": "300k/lan",
+      "status": "Review",
+      "postedAt": "2026-03-11",
+      "employer": "Hoàng Minh",
+      "slots": 1,
+      "priority": "High",
+      "notes": "Kiểm tra thêm đường ống"
+    },
+    {
+      "id": "JOB-2388",
+      "title": "Sửa đồ gia dụng",
+      "category": "Sửa đồ gia dụng",
+      "location": "Quận 3, TP.HCM",
+      "pay": "180k/ca",
+      "status": "Approved",
+      "postedAt": "2026-03-10",
+      "employer": "Lê Minh",
+      "slots": 1,
+      "priority": "Low",
+      "notes": "Máy giặt kêu to"
+    },
+    {
+      "id": "JOB-2381",
+      "title": "Vệ sinh máy lạnh",
+      "category": "Vệ sinh máy lạnh",
+      "location": "Quận 1, TP.HCM",
+      "pay": "320k/lan",
+      "status": "Pending",
+      "postedAt": "2026-03-10",
+      "employer": "Trần Thanh",
+      "slots": 1,
+      "priority": "High",
+      "notes": "Làm vào buổi chiều"
+    }
+  ],
+  "applications": [
+    {
+      "id": "APP-701",
+      "candidate": "Nguyễn Văn Tuấn",
+      "jobId": "JOB-2401",
+      "status": "New",
+      "rating": 4.9,
+      "appliedAt": "2026-03-12 18:05",
+      "phone": "0902 888 121"
+    },
+    {
+      "id": "APP-700",
+      "candidate": "Trần Thị Lan",
+      "jobId": "JOB-2398",
+      "status": "Contacted",
+      "rating": 4.7,
+      "appliedAt": "2026-03-12 12:20",
+      "phone": "0988 222 111"
+    },
+    {
+      "id": "APP-699",
+      "candidate": "Nguyễn Văn Tuấn",
+      "jobId": "JOB-2395",
+      "status": "New",
+      "rating": 4.8,
+      "appliedAt": "2026-03-12 10:45",
+      "phone": "0902 888 121"
+    },
+    {
+      "id": "APP-696",
+      "candidate": "Trần Thị Lan",
+      "jobId": "JOB-2388",
+      "status": "Shortlisted",
+      "rating": 4.6,
+      "appliedAt": "2026-03-11 20:18",
+      "phone": "0988 222 111"
+    }
+  ],
+  "payments": [
+    {
+      "id": "PM-2201",
+      "employer": "Nguyễn Văn Tuấn",
+      "package": "Đăng tin Plus",
+      "price": "2.400.000d",
+      "method": "Chuyển khoản",
+      "status": "Paid",
+      "date": "2026-03-12"
+    },
+    {
+      "id": "PM-2200",
+      "employer": "Trần Thị Lan",
+      "package": "Đăng tin Thường",
+      "price": "1.200.000d",
+      "method": "Ví điện tử",
+      "status": "Refunded",
+      "date": "2026-03-10"
+    }
+  ],
+  "userReports": [
+    {
+      "id": "REP-901",
+      "reporter": "leminh",
+      "jobReported": "JOB-2401",
+      "reason": "Nội dung không rõ ràng",
+      "date": "2026-03-12",
+      "status": "Pending"
+    },
+    {
+      "id": "REP-900",
+      "reporter": "tranthanh",
+      "jobReported": "JOB-2398",
+      "reason": "Thông tin sai lệch",
+      "date": "2026-03-11",
+      "status": "Resolved"
+    }
+  ],
+  "complaints": [
+    {
+      "id": "KN-2104",
+      "user": "tranthanh",
+      "type": "Thanh toán",
+      "message": "Bị trừ tiền nhưng chưa duyệt",
+      "date": "2026-03-12",
+      "status": "Pending"
+    },
+    {
+      "id": "KN-2103",
+      "user": "leminh",
+      "type": "Bài đăng",
+      "message": "Tin bị ẩn không rõ lý do",
+      "date": "2026-03-11",
+      "status": "Resolved"
+    }
+  ],
+  "employers": [
+    {
+      "id": "EMP-093",
+      "name": "Nguyễn Văn Tuấn",
+      "tier": "Premium",
+      "jobs": 12,
+      "kyc": "Verified",
+      "contact": "Nguyễn Văn Tuấn",
+      "phone": "0902 888 121"
+    },
+    {
+      "id": "EMP-090",
+      "name": "Lê Minh",
+      "tier": "Standard",
+      "jobs": 2,
+      "kyc": "Verified",
+      "contact": "Lê Minh",
+      "phone": "0902 888 121"
+    },
+    {
+      "id": "EMP-087",
+      "name": "Trần Thị Lan",
+      "tier": "Standard",
+      "jobs": 7,
+      "kyc": "Verified",
+      "contact": "Trần Thị Lan",
+      "phone": "0988 222 111"
+    },
+    {
+      "id": "EMP-083",
+      "name": "Đối tác Vệ sinh nhanh",
+      "tier": "Standard",
+      "jobs": 4,
+      "kyc": "Review",
+      "contact": "Lê Minh",
+      "phone": "0902 888 121"
+    }
+  ],
+  "categories": [
+    {
+      "id": "CAT-01",
+      "name": "Bưng bê",
+      "activeJobs": 220,
+      "avgPay": "230k/ca",
+      "sla": "8h"
+    },
+    {
+      "id": "CAT-02",
+      "name": "Giúp việc",
+      "activeJobs": 180,
+      "avgPay": "65k/gio",
+      "sla": "10h"
+    },
+    {
+      "id": "CAT-03",
+      "name": "Bảo vệ",
+      "activeJobs": 140,
+      "avgPay": "380k/ca",
+      "sla": "12h"
+    },
+    {
+      "id": "CAT-04",
+      "name": "Phụ bếp",
+      "activeJobs": 102,
+      "avgPay": "260k/ca",
+      "sla": "9h"
+    }
+  ],
+  "user_categories": [
+    {
+      "id": "cat_1",
+      "name": "Dọn dẹp nhà cửa",
+      "slug": "don-dep-nha",
+      "icon": "cleaning_services",
+      "color": "#FF5733"
+    },
+    {
+      "id": "cat_2",
+      "name": "Sửa đồ gia dụng",
+      "slug": "sua-do-gia-dung",
+      "icon": "build",
+      "color": "#33FF57"
+    },
+    {
+      "id": "cat_3",
+      "name": "Điện nước",
+      "slug": "dien-nuoc",
+      "icon": "plumbing",
+      "color": "#3357FF"
+    },
+    {
+      "id": "cat_4",
+      "name": "Vệ sinh máy lạnh",
+      "slug": "ve-sinh-may-lanh",
+      "icon": "ac_unit",
+      "color": "#FF33E9"
+    }
+  ],
+  "providers": [
+    {
+      "id": "p_101",
+      "name": "Nguyễn Văn Tuấn",
+      "category_id": "cat_3",
+      "avatar": "https://i.pravatar.cc/150?u=p_101",
+      "cover_image": "https://picsum.photos/seed/p101/600/300",
+      "bio": "Chuyên gia điện nước hơn 10 năm kinh nghiệm tại TP.HCM. Nhiệt tình, tận tâm, giá cả minh bạch.",
+      "rating": 4.9,
+      "total_reviews": 156,
+      "completed_jobs": 420,
+      "is_verified": true,
+      "skills": ["Sửa ống nước", "Lắp điện âm tường", "Sửa máy bơm"],
+      "work_area": ["Quận 1", "Quận 3", "Bình Thạnh"],
+      "status": "available",
+      "price_per_hour": 200000
+    },
+    {
+      "id": "p_102",
+      "name": "Trần Thị Lan",
+      "category_id": "cat_1",
+      "avatar": "https://i.pravatar.cc/150?u=p_102",
+      "cover_image": "https://picsum.photos/seed/p102/600/300",
+      "bio": "Dọn dẹp nhà cửa theo giờ, sạch sẽ, tỉ mỉ, có lý lịch rõ ràng.",
+      "rating": 4.7,
+      "total_reviews": 89,
+      "completed_jobs": 120,
+      "is_verified": true,
+      "skills": ["Dọn nhà", "Ủi đồ", "Nấu ăn gia đình"],
+      "work_area": ["Quận 7", "Quận 4", "Nhà Bè"],
+      "status": "busy",
+      "price_per_hour": 100000
+    }
+  ],
+  "reviews": [
+    {
+      "id": "rev_001",
+      "provider_id": "p_101",
+      "user_id": "u_501",
+      "user_name": "Lê Minh",
+      "user_avatar": "https://i.pravatar.cc/150?u=u501",
+      "rating": 5,
+      "comment": "Anh Tuấn làm rất kỹ, sửa xong còn dọn dẹp sạch sẽ khu vực làm việc. 5 sao!",
+      "images": ["https://picsum.photos/200/200?random=1", "https://picsum.photos/200/200?random=2"],
+      "created_at": "2024-05-20T08:30:00Z"
+    }
+  ],
+  "bookings": [
+    {
+      "id": "BK_2024_001",
+      "user_id": "u_501",
+      "provider_id": "p_101",
+      "service_name": "Sửa ống nước bồn rửa bát",
+      "schedule_time": "2024-05-22T14:00:00Z",
+      "address": {
+        "street": "456 Lê Lợi",
+        "district": "Quận 1",
+        "city": "TP.HCM"
+      },
+      "total_price": 250000,
+      "payment_method": "COD",
+      "status": "confirmed",
+      "has_reviewed": false,
+      "notes": "Nhà có chó dữ, vui lòng gọi điện trước khi đến."
+    }
+  ],
+  "notifications": [
+    {
+      "id": "nt_1",
+      "user_id": "u_501",
+      "title": "Đơn hàng đã được xác nhận",
+      "content": "Thợ Nguyễn Văn Tuấn đã xác nhận lịch hẹn vào lúc 14:00 ngày 22/05.",
+      "is_read": false,
+      "type": "booking_update",
+      "created_at": "2024-05-21T09:00:00Z"
+    }
+  ],
+  "reports": [
+    {
+      "id": "REP-01",
+      "label": "TP.HCM",
+      "value": 68
+    },
+    {
+      "id": "REP-02",
+      "label": "Đồng Nai",
+      "value": 42
+    },
+    {
+      "id": "REP-03",
+      "label": "Bình Dương",
+      "value": 34
+    },
+    {
+      "id": "REP-04",
+      "label": "Long An",
+      "value": 18
+    }
+  ],
+  "queues": [
+    {
+      "id": "QUE-01",
+      "type": "Duyệt bài đăng",
+      "count": 23,
+      "sla": "2h"
+    },
+    {
+      "id": "QUE-02",
+      "type": "KYC nhà tuyển dụng",
+      "count": 9,
+      "sla": "6h"
+    },
+    {
+      "id": "QUE-03",
+      "type": "Xác minh ứng viên",
+      "count": 12,
+      "sla": "4h"
+    }
+  ],
+  "system": [
+    {
+      "id": "SYS-01",
+      "title": "Ca trực hỗ trợ",
+      "status": "Running",
+      "owner": "Ops Team",
+      "updatedAt": "2026-03-12 21:10"
+    },
+    {
+      "id": "SYS-02",
+      "title": "API thông báo",
+      "status": "Degraded",
+      "owner": "Platform",
+      "updatedAt": "2026-03-12 19:55"
+    },
+    {
+      "id": "SYS-03",
+      "title": "Hàng đợi SMS",
+      "status": "Running",
+      "owner": "Comms",
+      "updatedAt": "2026-03-12 18:40"
+    }
+  ],
+  "activity": [
+    {
+      "id": "ACT-01",
+      "title": "2 yêu cầu mới cho dịch vụ Điện nước",
+      "time": "2026-03-12 19:32"
+    },
+    {
+      "id": "ACT-02",
+      "title": "Đối tác Nguyễn Văn Tuấn cập nhật hồ sơ",
+      "time": "2026-03-12 17:10"
+    },
+    {
+      "id": "ACT-03",
+      "title": "Thợ Trần Thị Lan vừa nhận việc",
+      "time": "2026-03-12 18:05"
+    },
+    {
+      "id": "ACT-04",
+      "title": "Cập nhật giá dịch vụ cho JOB-2395",
+      "time": "2026-03-12 09:58"
+    }
+  ]
+}
