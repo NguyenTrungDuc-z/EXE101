@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-// IMPORT THÊM HOOKS TỪ REACT-ROUTER-DOM
 import { useNavigate, useSearchParams } from 'react-router-dom'; 
 import { 
   Search, Filter, LayoutGrid, Brush, Zap, Wrench, Snowflake, 
@@ -9,6 +8,7 @@ import './Service.css';
 
 // 1. CÁC HÀM HỖ TRỢ
 const formatCurrency = (amount) => {
+  if (!amount) return '0đ';
   return new Intl.NumberFormat('vi-VN').format(amount) + 'đ';
 };
 
@@ -23,39 +23,36 @@ const getCategoryIcon = (iconString) => {
 };
 
 export default function Service() {
-  // KHỞI TẠO BIẾN ĐIỀU HƯỚNG VÀ ĐỌC URL
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const categoryFromUrl = searchParams.get('category');
 
-  // 2. KHỞI TẠO STATE CHO DATA TỪ JSON
-  const [dbData, setDbData] = useState({ categories: [], providers: [] });
+  // 2. KHỞI TẠO STATE (Đổi providers thành services)
+  const [dbData, setDbData] = useState({ categories: [], services: [] });
   const [isLoading, setIsLoading] = useState(true);
 
   // STATE CHO BỘ LỌC (FILTERS)
   const [searchTerm, setSearchTerm] = useState(''); 
-  // Lấy danh mục mặc định từ URL, nếu không có thì mặc định là 'all'
   const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl || 'all'); 
-  const [maxPrice, setMaxPrice] = useState(1000000); 
+  const [maxPrice, setMaxPrice] = useState(500000); 
   const [minRating, setMinRating] = useState(0); 
 
-  // Nếu người dùng đang ở trang dịch vụ mà đổi URL (VD: bấm từ Navbar), cập nhật lại state
   useEffect(() => {
     if (categoryFromUrl) {
       setSelectedCategory(categoryFromUrl);
     }
   }, [categoryFromUrl]);
 
-  // 3. FETCH DATA TỪ JSON-SERVER (CỔNG 9999)
+  // 3. FETCH DATA TỪ JSON-SERVER (Bảng services)
   useEffect(() => {
     Promise.all([
       fetch('http://localhost:9999/categories').then(res => res.json()),
-      fetch('http://localhost:9999/providers').then(res => res.json())
+      fetch('http://localhost:9999/services').then(res => res.json())
     ])
-    .then(([categoriesData, providersData]) => {
+    .then(([categoriesData, servicesData]) => {
       setDbData({ 
         categories: categoriesData, 
-        providers: providersData 
+        services: servicesData 
       });
       setIsLoading(false);
     })
@@ -68,22 +65,20 @@ export default function Service() {
   // Hàm lấy tên danh mục
   const getCategoryName = (catId) => {
     if (!dbData || !dbData.categories) return "Dịch vụ khác";
-    // Ép kiểu về chuỗi để so sánh cho an toàn
     const category = dbData.categories.find(c => String(c.id) === String(catId));
     return category ? category.name : "Dịch vụ khác";
   };
 
-  // 4. LOGIC LỌC DỮ LIỆU DỰA TRÊN STATE dbData
-  const filteredProviders = (dbData.providers || []).filter((provider) => {
+  // 4. LOGIC LỌC DỮ LIỆU DỰA TRÊN dbData.services
+  const filteredServices = (dbData.services || []).filter((service) => {
     const matchesSearch = 
-      (provider.title && provider.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (provider.name && provider.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (provider.skills && provider.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase())));
+      (service.title && service.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (service.description && service.description.toLowerCase().includes(searchTerm.toLowerCase()));
       
-    // Ép kiểu về chuỗi (String) để tránh lỗi lệch kiểu giữa ID trên URL và ID trong JSON
-    const matchesCategory = selectedCategory === 'all' || String(provider.category_id) === String(selectedCategory);
-    const matchesPrice = provider.price_per_hour <= maxPrice;
-    const matchesRating = provider.rating >= minRating;
+    const matchesCategory = selectedCategory === 'all' || String(service.category_id) === String(selectedCategory);
+    
+    const matchesPrice = service.basePriceHour <= maxPrice; 
+    const matchesRating = service.rating >= minRating;
 
     return matchesSearch && matchesCategory && matchesPrice && matchesRating;
   });
@@ -104,7 +99,7 @@ export default function Service() {
         <Search className="search-icon-top" size={20} />
         <input 
           type="text" 
-          placeholder="Tìm kiếm dịch vụ, tên thợ hoặc kỹ năng (VD: ống nước, dọn nhà)..." 
+          placeholder="Tìm kiếm dịch vụ (VD: dọn nhà, sửa máy lạnh)..." 
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)} 
         />
@@ -132,7 +127,6 @@ export default function Service() {
               {dbData.categories.map((cat) => (
                 <div 
                   key={cat.id}
-                  // Đảm bảo highlight đúng category khi match string
                   className={`category-item ${String(selectedCategory) === String(cat.id) ? 'active' : ''}`}
                   onClick={() => setSelectedCategory(cat.id)} 
                 >
@@ -142,7 +136,7 @@ export default function Service() {
             </div>
           </div>
 
-          {/* LỌC KHOẢNG GIÁ */}
+          {/* LỌC KHOẢNG GIÁ THEO GIỜ */}
           <div className="filter-section">
             <div className="filter-title">
               Giá tối đa/giờ: <span style={{color: '#2563eb', fontWeight: 'bold'}}>{formatCurrency(maxPrice)}</span>
@@ -150,21 +144,21 @@ export default function Service() {
             <input 
               type="range" 
               min="50000" 
-              max="1000000" 
-              step="50000" 
+              max="500000" 
+              step="10000" 
               value={maxPrice} 
               onChange={(e) => setMaxPrice(Number(e.target.value))} 
               className="price-slider" 
             />
             <div className="price-range-labels">
               <span>50.000Đ</span>
-              <span>1.000.000Đ</span>
+              <span>2.000.000Đ</span>
             </div>
           </div>
 
          {/* LỌC ĐÁNH GIÁ */}
           <div className="filter-section">
-            <div className="filter-title">ĐÁNH GIÁ</div>
+            <div className="filter-title">ĐÁNH GIÁ TRUNG BÌNH</div>
             <div className="rating-filter-list">
               
               <label className="rating-radio-label">
@@ -207,15 +201,15 @@ export default function Service() {
         {/* CỘT PHẢI - DANH SÁCH DỊCH VỤ */}
         <div className="service-main">
           <div className="service-results-text">
-            Tìm thấy <strong>{filteredProviders.length}</strong> kết quả phù hợp
+            Tìm thấy <strong>{filteredServices.length}</strong> kết quả phù hợp
           </div>
 
           {/* KHI KHÔNG TÌM THẤY KẾT QUẢ */}
-          {filteredProviders.length === 0 ? (
+          {filteredServices.length === 0 ? (
             <div className="no-results-box">
               <p>Không tìm thấy dịch vụ nào phù hợp với bộ lọc của bạn.</p>
               <button 
-                onClick={() => { setSelectedCategory('all'); setSearchTerm(''); setMaxPrice(1000000); setMinRating(0); }}
+                onClick={() => { setSelectedCategory('all'); setSearchTerm(''); setMaxPrice(500000); setMinRating(0); }}
                 className="btn-reset-filter"
               >
                 Xóa tất cả bộ lọc
@@ -223,49 +217,49 @@ export default function Service() {
             </div>
           ) : (
             <div className="service-grid">
-              {filteredProviders.map((provider) => (
+              {/* RENDER DANH SÁCH TỪ filteredServices */}
+              {filteredServices.map((service) => (
                 <div 
                   className="service-card" 
-                  key={provider.id}
-                  // THÊM SỰ KIỆN CLICK CHUYỂN TRANG VÀ ĐỔI TRỎ CHUỘT
-                  onClick={() => navigate(`/service/${provider.id}`)}
+                  key={service.id}
+                  onClick={() => navigate(`/service/${service.id}`)}
                   style={{ cursor: 'pointer' }}
                 >
                   
                   <div className="card-image-wrapper">
-                    <div className="card-badge">{getCategoryName(provider.category_id)}</div>
-                    <img src={provider.cover_image} alt={provider.title || provider.name} />
+                    <div className="card-badge">{getCategoryName(service.category_id)}</div>
+                    <img src={service.cover_image} alt={service.title} />
                   </div>
                   
                   <div className="card-body">
-                    {/* TÊN DỊCH VỤ (TITLE) */}
+                    {/* TÊN DỊCH VỤ */}
                     <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      {provider.title || provider.name}
-                      {provider.is_verified && <CheckCircle2 size={16} color="#10b981" />}
+                      {service.title}
+                      <CheckCircle2 size={16} color="#10b981" />
                     </h3>
                     
-                    <p className="card-desc">{provider.bio}</p>
+                    <p className="card-desc" style={{marginBottom: '10px'}}>{service.description}</p>
                     
-                    {/* ĐÁNH GIÁ */}
+                    {/* ĐÁNH GIÁ CHUNG DỊCH VỤ */}
                     <div className="card-rating">
                       <Star size={14} fill="#fbbf24" className="star-icon" />
-                      <strong>{provider.rating}</strong> ({provider.total_reviews} đánh giá)
+                      <strong>{service.rating}</strong> ({service.total_reviews} đánh giá)
                     </div>
 
                     {/* GIÁ TIỀN */}
                     <div className="card-price-row">
                       <span className="price-label">Theo giờ:</span>
-                      <span className="price-value">{formatCurrency(provider.price_per_hour)}/giờ</span>
+                      <span className="price-value">{formatCurrency(service.basePriceHour)}/giờ</span>
                     </div>
                     
                     <div className="card-price-row">
                       <span className="price-label">Theo ngày:</span>
-                      <span className="price-value">{formatCurrency(provider.price_per_hour * 8)}/ngày</span>
+                      <span className="price-value">{formatCurrency(service.basePriceDay)}/ngày</span>
                     </div>
 
-                    {/* SỐ LƯỢNG THỢ */}
-                    <div className="card-footer">
-                      <strong>{provider.available_workers || 1} thợ</strong> có sẵn
+                    {/* DÒNG THÔNG BÁO CHO MÔ HÌNH GRAB */}
+                    <div className="card-footer" style={{marginTop: '12px', fontSize: '13px', color: '#10b981', fontWeight: '600', display: 'flex', justifyContent: 'center', backgroundColor: '#ecfdf5', padding: '8px', borderRadius: '6px'}}>
+                      Hệ thống tự động điều phối thợ
                     </div>
                   </div>
                 </div>
@@ -274,7 +268,7 @@ export default function Service() {
           )}
 
           {/* PHÂN TRANG */}
-          {filteredProviders.length > 0 && (
+          {filteredServices.length > 0 && (
             <div className="pagination-wrapper">
               <button className="page-btn"><ChevronLeft size={16} /></button>
               <button className="page-btn active">1</button>

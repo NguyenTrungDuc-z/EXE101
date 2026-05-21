@@ -1,256 +1,249 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify'; 
 import { 
-  Search, BadgeCheck, Brush, Zap, Wrench, Refrigerator, Snowflake,
-  Star, ChevronRight, Clock, ShieldCheck, LayoutGrid
+  Search, Brush, Zap, Wrench, Snowflake,
+  LayoutGrid, MapPin, X, Navigation, Loader2
 } from 'lucide-react';
 import './HomePage.css';
 
-// Hàm hỗ trợ render Icon cho Danh mục
 const getCategoryIcon = (iconString) => {
   switch (iconString) {
     case 'cleaning_services': return <Brush size={28} />;
     case 'build': return <Wrench size={28} />;
     case 'plumbing': return <Zap size={28} />;
-    case 'ac_unit': return <Snowflake size={28} />; // Dùng Snowflake thay cho Refrigerator
+    case 'ac_unit': return <Snowflake size={28} />;
     default: return <LayoutGrid size={28} />;
   }
 };
 
 export default function HomePage() {
-  // 1. STATE LƯU TRỮ DỮ LIỆU TỪ API
+  const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
-  const [featuredProviders, setFeaturedProviders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState('Hà Nội, Việt Nam');
+  const [searchInput, setSearchInput] = useState(''); 
+  const [isLocating, setIsLocating] = useState(false); 
+  const [serviceKeyword, setServiceKeyword] = useState('');
+  const normalizeText = (text) => {
+    return String(text || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\u0111/g, 'd')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
 
-  // 2. GỌI API TỪ JSON-SERVER (Cổng 9999)
   useEffect(() => {
-    Promise.all([
-      fetch('http://localhost:9999/categories').then(res => res.json()),
-      fetch('http://localhost:9999/providers').then(res => res.json())
-    ])
-    .then(([catData, provData]) => {
-      // Lấy 4 danh mục đầu tiên cho mục Dịch vụ phổ biến
-      setCategories(catData.slice(0, 4)); 
-      
-      // Lấy 3 thợ có đánh giá cao nhất cho mục Thợ nổi bật
-      const topProviders = provData
-        .sort((a, b) => b.rating - a.rating)
-        .slice(0, 3);
-      setFeaturedProviders(topProviders);
-      
-      setIsLoading(false);
-    })
-    .catch(error => {
-      console.error("Lỗi khi tải dữ liệu trang chủ:", error);
-      setIsLoading(false);
-    });
+    fetch('http://localhost:9999/categories')
+      .then(res => res.json())
+      .then(catData => {
+        setCategories(catData.slice(0, 4)); 
+        setIsLoading(false);
+      })
+      .catch(error => {
+        console.error("Lỗi:", error);
+        setIsLoading(false);
+        toast.error("Không thể tải danh mục dịch vụ");
+      });
   }, []);
+
+  const handleSearchWorker = async () => {
+    if (!serviceKeyword.trim()) {
+      toast.warning("Vui lòng nhập dịch vụ bạn cần tìm!");
+      return;
+    }
+
+    try {
+      const [services, categories] = await Promise.all([
+        fetch('http://localhost:9999/services').then(res => res.json()),
+        fetch('http://localhost:9999/categories').then(res => res.json())
+      ]);
+
+      const categoryMap = new Map(categories.map(c => [String(c.id), c]));
+      const serviceAliases = {
+        srv_1: ['sua do', 'sua do gia dung', 'sua chua', 'sua dien', 'sua quat', 'sua may'],
+        srv_2: ['don dep', 'lau nha', 've sinh nha', 'quet nha', 'lau don'],
+        srv_3: ['ve sinh may lanh', 'bao duong may lanh', 'sua may lanh', 'nap gas']
+      };
+
+      const keyword = normalizeText(serviceKeyword);
+      const matchedService = services.find(s => {
+        const category = categoryMap.get(String(s.category_id));
+        const baseKeywords = [
+          s.title,
+          s.slug,
+          s.description,
+          ...(Array.isArray(s.features) ? s.features : []),
+          category?.name,
+          category?.slug,
+          ...(serviceAliases[s.id] || [])
+        ]
+          .map(normalizeText)
+          .filter(Boolean);
+
+        return baseKeywords.some(k => k.includes(keyword) || keyword.includes(k));
+      });
+
+      if (!matchedService) {
+        toast.error("Không tìm thấy công việc này trong dữ liệu. Vui lòng thử từ khóa khác!");
+        return;
+      }
+
+      toast.promise(
+        new Promise(resolve => setTimeout(resolve, 1500)),
+        {
+          pending: '🚀 Đang quét tìm thợ gần bạn...',
+          success: `Đã tìm thấy thợ cho: ${serviceKeyword}`,
+          error: 'Lỗi hệ thống'
+        }
+      ).then(() => {
+          navigate(`/service/${matchedService.id}`);
+      });
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi kết nối. Vui lòng thử lại!");
+    }
+  };
+
+  const handleGetMyLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Trình duyệt không hỗ trợ GPS!");
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18`);
+          const data = await response.json();
+          const address = data?.display_name || `${latitude}, ${longitude}`;
+          setSearchInput(address);
+          toast.success("Đã xác định được vị trí!");
+        } catch (error) {
+          toast.error("Lỗi lấy địa chỉ từ GPS");
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      () => {
+        toast.error("Bạn đã từ chối quyền truy cập vị trí.");
+        setIsLocating(false);
+      }
+    );
+  };
+
+  const handleConfirmLocation = () => {
+    if (searchInput.trim()) {
+      setSelectedLocation(searchInput);
+      toast.success("Địa chỉ đã được cập nhật!");
+      setIsMapModalOpen(false);
+    } else {
+      toast.warning("Vui lòng nhập hoặc chọn một địa chỉ!");
+    }
+  };
 
   return (
     <div className="homepage-wrapper">
-      
-      {/* KHỐI 1: HERO SECTION */}
       <section className="hero-container">
         <div className="hero-left">
-          <h1 className="hero-title">
-            Dịch vụ Gia đình <br />
-            <span className="highlight">Chuyên nghiệp</span> <br />
-            trong Tầm tay
-          </h1>
-          <p className="hero-subtitle">
-            Tìm kiếm thợ sửa chữa, vệ sinh và lắp đặt uy tín nhất cho ngôi nhà của bạn. Cam kết chất lượng và giá cả minh bạch.
-          </p>
-          <div className="search-box">
-            <Search color="#9ca3af" size={20} />
-            <input type="text" placeholder="Bạn cần dịch vụ gì hôm nay?" className="search-input" />
-            <button className="search-btn">Tìm kiếm</button>
-          </div>
-          <div className="trust-section">
-            <div className="avatars">
-              <img src="https://i.pravatar.cc/100?img=11" alt="Thợ 1" />
-              <img src="https://i.pravatar.cc/100?img=12" alt="Thợ 2" />
-              <img src="https://i.pravatar.cc/100?img=13" alt="Thợ 3" />
+          <h1 className="hero-title">Dịch vụ Gia đình <br /><span className="highlight">Chuyên nghiệp</span></h1>
+          <p className="hero-subtitle">Kết nối thợ sửa chữa, vệ sinh uy tín chỉ trong 30 phút.</p>
+          
+          <div className="search-and-location-box">
+            <div className="location-selector" onClick={() => {
+                setIsMapModalOpen(true);
+                setSearchInput(selectedLocation); // Reset input modal về vị trí hiện tại
+            }}>
+              <MapPin size={20} color="#ef4444" />
+              <span className="location-text">{selectedLocation}</span>
+              <span className="change-link">Thay đổi</span>
             </div>
-            <span className="trust-text"><strong>10,000+</strong> Thợ đã sẵn sàng</span>
+            <div className="search-box">
+              <Search color="#9ca3af" size={20} />
+              <input 
+                type="text" 
+                placeholder="Bạn cần sửa gì, dọn gì...?" 
+                value={serviceKeyword}
+                onChange={(e) => setServiceKeyword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearchWorker()}
+              />
+              <button className="search-btn" onClick={handleSearchWorker}>Tìm thợ</button>
+            </div>
           </div>
         </div>
         <div className="hero-right">
-          <img src="https://images.unsplash.com/photo-1621905252507-b35492cc74b4?q=80&w=800&auto=format&fit=crop" alt="Thợ chuyên nghiệp" className="main-image" />
-          <div className="floating-badge">
-            <div className="badge-icon"><BadgeCheck size={24} /></div>
-            <div className="badge-info">
-              <h4>99.8%</h4>
-              <p>Khách hàng hài lòng</p>
-            </div>
-          </div>
+          <img src="https://images.unsplash.com/photo-1621905252507-b35492cc74b4?q=80&w=800" alt="Thợ" className="main-image" />
         </div>
       </section>
 
-      {/* KHỐI 2: DỊCH VỤ PHỔ BIẾN (GỌI TỪ API) */}
       <section className="services-section">
         <h2 className="section-title">Dịch vụ phổ biến</h2>
         {isLoading ? (
-          <p style={{textAlign: 'center', padding: '20px'}}>Đang tải dịch vụ...</p>
+            <div className="loading-container"><Loader2 className="animate-spin" /> Đang tải...</div>
         ) : (
-          <div className="services-grid">
+            <div className="services-grid">
             {categories.map((cat) => (
-              <div className="service-card" key={cat.id}>
-                <div className="service-icon">{getCategoryIcon(cat.icon)}</div>
+                <div className="service-card" key={cat.id} onClick={() => navigate(`/service?category=${cat.id}`)}>
+                <div className="service-icon" style={{color: cat.color}}>{getCategoryIcon(cat.icon)}</div>
                 <h3>{cat.name}</h3>
-                <p>{cat.description || "Dịch vụ chuyên nghiệp"}</p>
-              </div>
+                <p>{cat.description || "Thợ tay nghề cao, phục vụ tận tình."}</p>
+                </div>
             ))}
-          </div>
+            </div>
         )}
       </section>
 
-      {/* KHỐI 3: CÁCH THỨC HOẠT ĐỘNG */}
-      <section className="how-it-works-section">
-        <div className="hiw-header">
-          <h2>Cách thức hoạt động</h2>
-          <p>Chỉ với 3 bước đơn giản để ngôi nhà của bạn được chăm sóc bởi những bàn tay chuyên nghiệp nhất.</p>
-        </div>
-        <div className="steps-container">
-          <div className="steps-line"></div>
-          <div className="step-item">
-            <div className="step-number">1</div>
-            <h3>Chọn dịch vụ</h3>
-            <p>Dễ dàng lựa chọn từ danh mục hàng trăm dịch vụ đa dạng.</p>
-          </div>
-          <div className="step-item">
-            <div className="step-number">2</div>
-            <h3>Chọn thợ ưng ý</h3>
-            <p>Xem hồ sơ, kinh nghiệm và đánh giá từ khách hàng thực tế.</p>
-          </div>
-          <div className="step-item">
-            <div className="step-number">3</div>
-            <h3>Đặt lịch & Thư giãn</h3>
-            <p>Xác nhận lịch hẹn và thanh toán an toàn qua ứng dụng.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================= */}
-      {/* KHỐI 4: THỢ NỔI BẬT (GỌI TỪ API) */}
-      {/* ========================================= */}
-      <section className="featured-providers-section">
-        <div className="section-header-flex">
-          <div>
-            <h2 className="section-title">Thợ nổi bật trong khu vực</h2>
-            <p className="section-subtitle">Những chuyên gia có đánh giá cao nhất tuần này.</p>
-          </div>
-          <a href="#xem-tat-ca" className="view-all-link">Xem tất cả <ChevronRight size={18} /></a>
-        </div>
-
-        {isLoading ? (
-          <p style={{textAlign: 'center', padding: '20px'}}>Đang tải danh sách thợ...</p>
-        ) : (
-          <div className="providers-grid">
-            {featuredProviders.map((provider) => (
-              <div className="provider-card" key={provider.id}>
-                
-                {/* Ảnh bìa */}
-                <div 
-                  className="provider-cover" 
-                  style={{ backgroundImage: `url(${provider.cover_image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-                >
-                  {provider.is_verified && <span className="badge">Được xác minh</span>}
-                </div>
-                
-                {/* Thông tin thợ */}
-                <div className="provider-info">
-                  {/* Nếu JSON không có avatar, dùng API tạo avatar từ tên */}
-                  <img 
-                    src={provider.avatar_url || `https://ui-avatars.com/api/?name=${provider.name}&background=2563eb&color=fff`} 
-                    alt={provider.name} 
-                    className="provider-avatar" 
-                  />
-                  <h3>{provider.name}</h3>
-                  <p className="specialty">{provider.title || "Chuyên gia dịch vụ"} • {provider.experience_years || 5} năm KN</p>
-                  
-                  {/* Render Sao tự động dựa theo rating */}
-                  <div className="rating">
-                    {[...Array(5)].map((_, index) => (
-                      <Star 
-                        key={index} 
-                        size={16} 
-                        fill={index < Math.round(provider.rating) ? "#fbbf24" : "none"} 
-                        color={index < Math.round(provider.rating) ? "#fbbf24" : "#d1d5db"} 
-                      />
-                    ))}
-                    <span className="rating-score">{provider.rating}</span>
-                    <span className="rating-count">({provider.total_reviews})</span>
-                  </div>
-                  
-                  <button className="view-profile-btn">Xem hồ sơ</button>
-                </div>
+      {/* MODAL GOOGLE MAPS */}
+      {isMapModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3><MapPin size={20} color="#ef4444" /> Xác nhận địa chỉ</h3>
+              <button className="close-btn" onClick={() => setIsMapModalOpen(false)}><X size={24} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="map-input-group">
+                <input 
+                    type="text" 
+                    placeholder="Nhập địa chỉ nhà bạn..." 
+                    value={searchInput} 
+                    onChange={(e) => setSearchInput(e.target.value)} 
+                />
+                <button className="gps-btn" onClick={handleGetMyLocation} disabled={isLocating}>
+                  {isLocating ? <Loader2 className="animate-spin" size={18} /> : <Navigation size={18} />}
+                  {isLocating ? '...' : 'Vị trí tôi'}
+                </button>
               </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ========================================= */}
-      {/* KHỐI 5: TẠI SAO CHỌN */}
-      {/* ========================================= */}
-      <section className="why-choose-us-section">
-        <div className="hiw-header">
-          <h2>Tại Sao Chọn ViecNhanh?</h2>
-          <p>Chúng tôi cam kết mang đến trải nghiệm tốt nhất</p>
-        </div>
-        <div className="reasons-grid">
-          <div className="reason-item">
-            <div className="reason-icon"><Clock size={24} /></div>
-            <h3>Nhanh Chóng</h3>
-            <p>Đặt lịch dễ dàng, thợ có mặt trong vòng 2 giờ</p>
-          </div>
-          <div className="reason-item">
-            <div className="reason-icon"><ShieldCheck size={24} /></div>
-            <h3>Uy Tín</h3>
-            <p>Đội ngũ thợ được xác minh và đánh giá bởi khách hàng</p>
-          </div>
-          <div className="reason-item">
-            <div className="reason-icon"><Star size={24} /></div>
-            <h3>Chất Lượng</h3>
-            <p>Cam kết chất lượng dịch vụ, hoàn tiền 100% nếu không hài lòng</p>
+              <div className="map-iframe-container">
+                <iframe 
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(searchInput || "Hà Nội")}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                  title="map"
+                  loading="lazy"
+                ></iframe>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={() => setIsMapModalOpen(false)}>Hủy</button>
+              <button className="btn-confirm" onClick={handleConfirmLocation}>Xác nhận địa chỉ</button>
+            </div>
           </div>
         </div>
-      </section>
-
-      {/* ========================================= */}
-      {/* KHỐI 6: CTA SẴN SÀNG BẮT ĐẦU */}
-      {/* ========================================= */}
-      <section className="cta-section">
-        <h2>Sẵn Sàng Bắt Đầu?</h2>
-        <p>Tìm thợ ngay hôm nay và trải nghiệm dịch vụ chuyên nghiệp</p>
-        <button className="cta-btn">
-          <Search size={18} />
-          Tìm dịch vụ ngay
-        </button>
-      </section>
-
-      {/* ========================================= */}
-      {/* KHỐI 7: THỐNG KÊ */}
-      {/* ========================================= */}
-      <section className="stats-section">
-        <div className="stat-item">
-          <h2>1000+</h2>
-          <p>Thợ chuyên nghiệp</p>
-        </div>
-        <div className="stat-item">
-          <h2>50K+</h2>
-          <p>Đơn hoàn thành</p>
-        </div>
-        <div className="stat-item">
-          <h2>4.8</h2>
-          <p>Đánh giá trung bình</p>
-        </div>
-        <div className="stat-item">
-          <h2>24/7</h2>
-          <p>Hỗ trợ khách hàng</p>
-        </div>
-      </section>
-
+      )}
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+

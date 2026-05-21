@@ -1,7 +1,7 @@
 /* Bao bọc toàn bộ trang Login */
 .login-page {
   display: flex;
-  min-height: calc(100vh - 80px); /* Phù hợp khi có Header */
+  min-height: calc(100vh - 80px);
   background-color: #ffffff;
   font-family: system-ui, -apple-system, sans-serif;
 }
@@ -11,8 +11,7 @@
 ========================================= */
 .login-left {
   flex: 1;
-  background-color: #fff5f2; /* Màu cam/hồng nhạt */
-  /* Tạo nền lưới (Grid pattern) */
+  background-color: #fff5f2;
   background-image: 
     linear-gradient(#fcdcd3 1px, transparent 1px),
     linear-gradient(90deg, #fcdcd3 1px, transparent 1px);
@@ -25,6 +24,7 @@
   position: relative;
 }
 
+/* Logo box ở cột trái */
 .login-logo-box {
   background: white;
   padding: 8px 24px;
@@ -136,6 +136,7 @@
   text-decoration: underline;
 }
 
+/* Input groups */
 .form-group {
   margin-bottom: 20px;
   position: relative;
@@ -149,39 +150,43 @@
   margin-bottom: 8px;
 }
 
-.form-group input[type="text"],
-.form-group input[type="password"] {
+.form-group input {
   width: 100%;
   padding: 14px 16px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 15px;
   box-sizing: border-box;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
 }
 
 .form-group input:focus {
   outline: none;
   border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-/* Mắt ẩn/hiện mật khẩu */
+/* Icon mắt ẩn/hiện mật khẩu */
 .password-toggle {
   position: absolute;
-  right: 16px;
-  top: 38px; /* Căn giữa so với ô input */
+  right: 14px;
+  top: 38px; /* Cân đối với nhãn label */
   cursor: pointer;
   color: #9ca3af;
+  display: flex;
+  align-items: center;
 }
 
-.forgot-password {
-  position: absolute;
-  right: 0;
-  top: 0;
-  font-size: 13px;
-  color: #2563eb;
-  text-decoration: none;
-  font-weight: 600;
+.password-toggle:hover {
+  color: #374151;
+}
+
+/* TÙY CHỈNH MỚI: Dòng Ghi nhớ & Quên mật khẩu */
+.login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
 }
 
 .remember-me {
@@ -190,9 +195,22 @@
   gap: 8px;
   font-size: 14px;
   color: #4b5563;
-  margin-bottom: 24px;
+  cursor: pointer;
 }
 
+.forgot-password {
+  position: static; /* Gỡ bỏ absolute cũ để đi theo flexbox */
+  font-size: 14px;
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.forgot-password:hover {
+  text-decoration: underline;
+}
+
+/* Nút Submit */
 .btn-submit {
   width: 100%;
   padding: 14px;
@@ -203,14 +221,39 @@
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
   margin-bottom: 24px;
 }
 
 .btn-submit:hover {
-  background-color: #2563eb;
+  background-color: #1d4ed8;
+  transform: translateY(-1px);
 }
 
+.btn-submit:disabled {
+  background-color: #93c5fd;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Center loading spinner */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Divider & Social */
 .divider {
   display: flex;
   align-items: center;
@@ -272,4 +315,14 @@
 .terms-text a {
   color: #6b7280;
   text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .login-left {
+    display: none; /* Ẩn banner trên màn hình nhỏ */
+  }
+  .login-right {
+    padding: 0 5%;
+  }
 }

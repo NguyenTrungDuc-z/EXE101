@@ -1,11 +1,96 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { CheckCircle2, Search, Briefcase, User, Mail, Phone, Lock, ShieldCheck } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify'; // Import toast
+import { 
+  CheckCircle2, Search, Briefcase, User, Mail, Phone, Lock, ShieldCheck, Loader2 
+} from 'lucide-react';
 import './Register.css';
 
 export default function Register() {
-  // State lưu trữ vai trò được chọn: 'employer' (Tìm người giúp) hoặc 'worker' (Tìm việc làm)
+  const navigate = useNavigate();
+
   const [role, setRole] = useState('employer');
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: ''
+  });
+
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+
+    // 1. Validate cơ bản bằng Toast
+    if (!formData.name || !formData.email || !formData.phone || !formData.password) {
+      toast.warning('Vui lòng điền đầy đủ các trường thông tin!');
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại!');
+      return;
+    }
+
+    if (!agreeTerms) {
+      toast.info('Bạn cần đồng ý với điều khoản để tiếp tục.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Giả lập kiểm tra email tồn tại (Tùy chọn)
+      const checkRes = await fetch(`http://localhost:9999/users?email=${formData.email}`);
+      const existingUsers = await checkRes.json();
+      
+      if (existingUsers.length > 0) {
+        toast.error('Email này đã được đăng ký. Hãy thử email khác!');
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Gửi request POST
+      const response = await fetch('http://localhost:9999/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          role: role,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}&background=random`,
+          createdAt: new Date().toISOString()
+        })
+      });
+
+      if (response.ok) {
+        // Thay alert bằng toast thành công
+        toast.success('🎉 Đăng ký tài khoản thành công! Đang chuyển hướng...');
+        
+        // Chờ một chút để người dùng kịp nhìn thấy toast thành công
+        setTimeout(() => {
+          navigate('/Login');
+        }, 2000);
+      } else {
+        toast.error('Đăng ký thất bại. Lỗi từ máy chủ!');
+      }
+    } catch (error) {
+      console.error('Lỗi kết nối:', error);
+      toast.error('Không thể kết nối đến máy chủ. Hãy kiểm tra json-server!');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="register-page">
@@ -15,8 +100,7 @@ export default function Register() {
         <div className="register-left">
           <h1>Bắt đầu hành trình sự nghiệp của bạn</h1>
           <p className="register-left-desc">
-            Gia nhập cộng đồng tìm việc nhanh chóng và hiệu quả nhất Việt Nam. 
-            Hàng ngàn cơ hội đang chờ đón bạn.
+            Gia nhập cộng đồng tìm việc nhanh chóng và hiệu quả nhất Việt Nam.
           </p>
 
           <div className="benefits-list">
@@ -28,10 +112,6 @@ export default function Register() {
               <CheckCircle2 className="benefit-icon" size={24} />
               Nhận thông báo việc làm phù hợp
             </div>
-            <div className="benefit-item">
-              <CheckCircle2 className="benefit-icon" size={24} />
-              Ứng tuyển nhanh chóng chỉ với 1 click
-            </div>
           </div>
         </div>
 
@@ -39,11 +119,10 @@ export default function Register() {
         <div className="register-right">
           <h2>Đăng ký tài khoản</h2>
           <p className="register-subtitle">
-            Bạn đã có tài khoản? <Link to="/dang-nhap" className="register-link">Đăng nhập ngay</Link>
+            Bạn đã có tài khoản? <Link to="/Login" className="register-link">Đăng nhập ngay</Link>
           </p>
 
-          <form>
-            {/* Box chọn vai trò */}
+          <form onSubmit={handleRegister}>
             <label className="role-label">Bạn tham gia với vai trò nào?</label>
             <div className="role-selector">
               <div 
@@ -65,12 +144,15 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Các ô input nhập liệu */}
             <div className="input-group">
               <label>Họ và tên</label>
               <div className="input-wrapper">
                 <User className="input-icon" size={18} />
-                <input type="text" placeholder="Nhập họ và tên của bạn" />
+                <input 
+                  type="text" name="name"
+                  value={formData.name} onChange={handleInputChange}
+                  placeholder="Nhập họ và tên của bạn" 
+                />
               </div>
             </div>
 
@@ -78,7 +160,11 @@ export default function Register() {
               <label>Email</label>
               <div className="input-wrapper">
                 <Mail className="input-icon" size={18} />
-                <input type="email" placeholder="example@gmail.com" />
+                <input 
+                  type="email" name="email"
+                  value={formData.email} onChange={handleInputChange}
+                  placeholder="example@gmail.com" 
+                />
               </div>
             </div>
 
@@ -86,17 +172,24 @@ export default function Register() {
               <label>Số điện thoại</label>
               <div className="input-wrapper">
                 <Phone className="input-icon" size={18} />
-                <input type="tel" placeholder="Nhập số điện thoại" />
+                <input 
+                  type="tel" name="phone"
+                  value={formData.phone} onChange={handleInputChange}
+                  placeholder="Nhập số điện thoại" 
+                />
               </div>
             </div>
 
-            {/* Hàng chứa Mật khẩu & Xác nhận */}
             <div className="input-row">
               <div className="input-group">
                 <label>Mật khẩu</label>
                 <div className="input-wrapper">
                   <Lock className="input-icon" size={18} />
-                  <input type="password" placeholder="••••••••" />
+                  <input 
+                    type="password" name="password"
+                    value={formData.password} onChange={handleInputChange}
+                    placeholder="••••••••" 
+                  />
                 </div>
               </div>
 
@@ -104,33 +197,42 @@ export default function Register() {
                 <label>Xác nhận mật khẩu</label>
                 <div className="input-wrapper">
                   <ShieldCheck className="input-icon" size={18} />
-                  <input type="password" placeholder="••••••••" />
+                  <input 
+                    type="password" name="confirmPassword"
+                    value={formData.confirmPassword} onChange={handleInputChange}
+                    placeholder="••••••••" 
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Điều khoản */}
             <label className="terms-checkbox">
-              <input type="checkbox" />
+              <input 
+                type="checkbox" 
+                checked={agreeTerms}
+                onChange={(e) => setAgreeTerms(e.target.checked)}
+              />
               <span>
-                Tôi đồng ý với <a href="#!">Điều khoản dịch vụ</a> và <a href="#!">Chính sách bảo mật</a> của ViecNhanh.
+                Tôi đồng ý với <a href="#!">Điều khoản</a> và <a href="#!">Chính sách</a>.
               </span>
             </label>
 
-            {/* Nút Submit */}
-            <button type="button" className="btn-register-submit">Đăng ký ngay</button>
+            <button 
+              type="submit" 
+              className="btn-register-submit" 
+              disabled={isLoading}
+            >
+              {isLoading ? 'Đang tạo tài khoản...' : 'Đăng ký ngay'}
+            </button>
           </form>
 
-          {/* Social Links */}
-          <div className="divider">HOẶC ĐĂNG KÝ BẰNG</div>
+          <div className="divider">HOẶC</div>
           <div className="social-login">
             <button className="btn-social">
               <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" alt="Google" className="social-icon" />
-              Google
+              Tiếp tục với Google
             </button>
-           
           </div>
-
         </div>
       </div>
     </div>
