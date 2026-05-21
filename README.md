@@ -1,70 +1,112 @@
-# Getting Started with Create React App
+# ViecNhanh Platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Bo code duoc tach lai tu dau thanh 2 phan ro rang:
 
-## Available Scripts
+- `backend/`: API, model MongoDB, seed data, route admin/user
+- `frontend/`: giao dien React cho admin va user
 
-In the project directory, you can run:
+## Cau truc
 
-### `npm start`
+```text
+backend/
+  mongo-seed/
+  src/
+frontend/
+  src/
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## MongoDB collections
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- `users`
+- `employerprofiles`
+- `candidateprofiles`
+- `categories`
+- `jobposts`
+- `applications`
+- `orders`
+- `payments`
+- `complaints`
+- `operationtasks`
 
-### `npm test`
+## Muc tieu MVP
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- Admin:
+  - dashboard van hanh
+  - quan ly bai dang
+  - quan ly nha tuyen dung
+  - quan ly ung vien
+  - hang doi nghiep vu va khiu nai
+- User:
+  - trang tong quan
+  - danh sach viec
+  - danh sach ung tuyen va don
+  - form dang viec
 
-### `npm run build`
+## Chay local
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. Cai dependencies:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```bash
+npm install
+npm --workspace backend install
+npm --workspace frontend install
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+2. Tao file `backend/.env`:
 
-### `npm run eject`
+```env
+PORT=4000
+MONGODB_URI=mongodb://127.0.0.1:27017/viecnhanh
+CLIENT_ORIGIN=http://localhost:5173
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+3. Import seed MongoDB tu `backend/mongo-seed/`.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+4. Chay backend va frontend:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```bash
+npm run dev:backend
+npm run dev:frontend
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Ghi chu
 
-## Learn More
+- Prototype cu trong root `src/` va `public/` khong con la entry chinh.
+- API moi duoc tach ro route `admin` va `user`.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## API split
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Admin API
 
-### Code Splitting
+- `GET /api/admin/overview`
+- `GET /api/admin/jobs`
+- `GET /api/admin/employers`
+- `GET /api/admin/candidates`
+- `GET /api/admin/operations`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### User API
 
-### Analyzing the Bundle Size
+- `GET /api/user/home`
+- `GET /api/user/jobs`
+- `GET /api/user/jobs/:jobCode`
+- `GET /api/user/applications`
+- `GET /api/user/orders`
+- `POST /api/user/jobs`
+- `POST /api/user/applications`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Frontend split
 
-### Making a Progressive Web App
+### User routes
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+- `/`
+- `/user/jobs`
+- `/user/workspace`
+- `/user/post-job`
 
-### Advanced Configuration
+### Admin routes
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- `/admin`
+- `/admin/jobs`
+- `/admin/employers`
+- `/admin/candidates`
+- `/admin/operations`

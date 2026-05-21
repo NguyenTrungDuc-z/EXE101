@@ -1,0 +1,26 @@
+[
+  {
+    "code": "OPS-1001",
+    "type": "job_approval",
+    "title": "Review pending cleaning request",
+    "status": "open",
+    "ownerTeam": "content_ops",
+    "priority": "high",
+    "slaHours": 2,
+    "relatedType": "job",
+    "relatedCode": "JOB-2602",
+    "createdAt": "2026-05-14T06:30:00.000Z"
+  },
+  {
+    "code": "OPS-1002",
+    "type": "kyc_review",
+    "title": "Verify employer legal documents",
+    "status": "in_progress",
+    "ownerTeam": "risk_ops",
+    "priority": "medium",
+    "slaHours": 6,
+    "relatedType": "employer",
+    "relatedCode": "USR-EMP-002",
+    "createdAt": "2026-05-14T05:20:00.000Z"
+  }
+]

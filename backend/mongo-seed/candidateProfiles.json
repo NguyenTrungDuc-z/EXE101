@@ -1,0 +1,20 @@
+[
+  {
+    "userCode": "USR-CAN-001",
+    "headline": "Electric and plumbing freelancer",
+    "skills": ["plumbing", "electrical", "maintenance"],
+    "rating": 4.9,
+    "verified": true,
+    "completedJobs": 34,
+    "availability": "available"
+  },
+  {
+    "userCode": "USR-CAN-002",
+    "headline": "Cleaning and home support specialist",
+    "skills": ["cleaning", "laundry", "home care"],
+    "rating": 4.7,
+    "verified": true,
+    "completedJobs": 21,
+    "availability": "busy"
+  }
+]

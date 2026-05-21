@@ -1,0 +1,26 @@
+[
+  {
+    "code": "CAT-PLUMB",
+    "name": "Dien nuoc",
+    "slug": "dien-nuoc",
+    "icon": "wrench",
+    "serviceType": "urgent",
+    "averageBudgetLabel": "250k - 500k"
+  },
+  {
+    "code": "CAT-CLEAN",
+    "name": "Don dep nha",
+    "slug": "don-dep-nha",
+    "icon": "sparkles",
+    "serviceType": "hourly",
+    "averageBudgetLabel": "180k - 320k"
+  },
+  {
+    "code": "CAT-AC",
+    "name": "Ve sinh may lanh",
+    "slug": "ve-sinh-may-lanh",
+    "icon": "fan",
+    "serviceType": "scheduled",
+    "averageBudgetLabel": "300k - 450k"
+  }
+]

@@ -1,0 +1,24 @@
+[
+  {
+    "code": "COM-3001",
+    "ownerCode": "USR-EMP-002",
+    "targetType": "job",
+    "targetCode": "JOB-2602",
+    "type": "approval_delay",
+    "message": "Job dang cho duyet qua lau.",
+    "status": "open",
+    "createdAt": "2026-05-14T07:00:00.000Z",
+    "resolutionNote": ""
+  },
+  {
+    "code": "COM-3002",
+    "ownerCode": "USR-CAN-001",
+    "targetType": "order",
+    "targetCode": "ORD-7001",
+    "type": "payment",
+    "message": "Can xac nhan tien da chuyen cho tho.",
+    "status": "review",
+    "createdAt": "2026-05-14T09:45:00.000Z",
+    "resolutionNote": ""
+  }
+]

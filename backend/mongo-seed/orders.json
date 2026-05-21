@@ -1,0 +1,24 @@
+[
+  {
+    "code": "ORD-7001",
+    "jobCode": "JOB-2601",
+    "employerCode": "USR-EMP-001",
+    "candidateCode": "USR-CAN-001",
+    "status": "confirmed",
+    "scheduledAt": "2026-05-14T11:00:00.000Z",
+    "totalAmount": 350000,
+    "paymentStatus": "paid",
+    "address": "12 Le Loi, District 1, Ho Chi Minh City"
+  },
+  {
+    "code": "ORD-7002",
+    "jobCode": "JOB-2603",
+    "employerCode": "USR-EMP-001",
+    "candidateCode": "USR-CAN-002",
+    "status": "pending",
+    "scheduledAt": "2026-05-16T14:00:00.000Z",
+    "totalAmount": 420000,
+    "paymentStatus": "pending",
+    "address": "158 Nguyen Gia Tri, Binh Thanh, Ho Chi Minh City"
+  }
+]

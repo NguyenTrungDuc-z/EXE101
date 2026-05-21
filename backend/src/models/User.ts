@@ -1,0 +1,18 @@
+import { Schema, model } from "mongoose";
+
+const userSchema = new Schema(
+  {
+    code: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    phone: { type: String, required: true },
+    role: { type: String, enum: ["admin", "employer", "candidate"], required: true },
+    status: { type: String, enum: ["active", "pending", "locked"], required: true },
+    city: { type: String, required: true },
+    avatar: { type: String, required: true },
+    createdAt: { type: Date, required: true }
+  },
+  { versionKey: false }
+);
+
+export const UserModel = model("User", userSchema);

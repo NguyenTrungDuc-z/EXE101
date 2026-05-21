@@ -1,0 +1,57 @@
+[
+  {
+    "code": "USR-ADM-001",
+    "name": "Operations Admin",
+    "email": "admin@viecnhanh.vn",
+    "phone": "0909000001",
+    "role": "admin",
+    "status": "active",
+    "city": "Ho Chi Minh City",
+    "avatar": "https://i.pravatar.cc/120?u=admin001",
+    "createdAt": "2026-05-01T08:00:00.000Z"
+  },
+  {
+    "code": "USR-EMP-001",
+    "name": "Le Minh",
+    "email": "leminh@viecnhanh.vn",
+    "phone": "0902000121",
+    "role": "employer",
+    "status": "active",
+    "city": "District 1",
+    "avatar": "https://i.pravatar.cc/120?u=emp001",
+    "createdAt": "2026-05-02T08:00:00.000Z"
+  },
+  {
+    "code": "USR-EMP-002",
+    "name": "Tran Thanh",
+    "email": "tranhthanh@viecnhanh.vn",
+    "phone": "0938340900",
+    "role": "employer",
+    "status": "pending",
+    "city": "District 7",
+    "avatar": "https://i.pravatar.cc/120?u=emp002",
+    "createdAt": "2026-05-03T08:00:00.000Z"
+  },
+  {
+    "code": "USR-CAN-001",
+    "name": "Nguyen Van Tuan",
+    "email": "nguyenvantuan@viecnhanh.vn",
+    "phone": "0906552818",
+    "role": "candidate",
+    "status": "active",
+    "city": "Thu Duc",
+    "avatar": "https://i.pravatar.cc/120?u=can001",
+    "createdAt": "2026-05-03T10:00:00.000Z"
+  },
+  {
+    "code": "USR-CAN-002",
+    "name": "Tran Thi Lan",
+    "email": "tranthilan@viecnhanh.vn",
+    "phone": "0988222111",
+    "role": "candidate",
+    "status": "active",
+    "city": "District 4",
+    "avatar": "https://i.pravatar.cc/120?u=can002",
+    "createdAt": "2026-05-04T09:00:00.000Z"
+  }
+]
