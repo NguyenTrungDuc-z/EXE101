@@ -1,0 +1,291 @@
+/* =========================================
+   PHẦN 1: HERO SECTION
+========================================= */
+.hero-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 80px 50px;
+  background-color: #f0f7ff; /* Xanh cực nhạt để làm nổi bật nội dung */
+  font-family: system-ui, -apple-system, sans-serif;
+  gap: 40px;
+}
+
+.hero-left {
+  flex: 1;
+  max-width: 600px;
+}
+
+.hero-title {
+  font-size: 52px;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.1;
+  margin-bottom: 20px;
+}
+
+.hero-title .highlight {
+  color: #2563eb; /* Màu xanh thương hiệu chính */
+}
+
+.hero-subtitle {
+  font-size: 18px;
+  color: #4b5563; /* Sửa từ xanh nhạt sang xám đậm cho dễ đọc */
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+/* Thanh tìm kiếm & Vị trí */
+.search-and-location-box {
+  background: white;
+  padding: 10px;
+  border-radius: 16px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.location-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 15px;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+}
+
+.location-text {
+  flex: 1;
+  font-size: 14px;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.change-link {
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  padding: 5px 5px 5px 15px;
+}
+
+.search-box input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  padding: 10px;
+}
+
+.search-btn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.search-btn:hover {
+  background-color: #1d4ed8;
+}
+
+/* =========================================
+   PHẦN 2: DỊCH VỤ PHỔ BIẾN 
+========================================= */
+.services-section {
+  padding: 80px 50px;
+  background-color: #ffffff;
+}
+
+.section-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+}
+
+.service-card {
+  background-color: #f8fafc; /* Nền xám nhạt */
+  padding: 30px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.service-card:hover {
+  transform: translateY(-10px);
+  background-color: #ffffff;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  border-color: #2563eb;
+}
+
+.service-icon {
+  margin-bottom: 20px;
+  display: inline-block;
+}
+
+.service-card h3 {
+  font-size: 20px;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+.service-card p {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+/* =========================================
+   PHẦN THÔNG BÁO MODAL (BỔ SUNG)
+========================================= */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: white;
+  width: 90%;
+  max-width: 600px;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.map-input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.map-input-group input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.gps-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 15px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.map-iframe-container {
+  width: 100%;
+  height: 300px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #eee;
+}
+
+.map-iframe-container iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.modal-footer {
+  padding: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f9fafb;
+}
+
+.btn-confirm {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-cancel {
+  background: transparent;
+  color: #6b7280;
+  border: none;
+  cursor: pointer;
+}
+
+/* =========================================
+   PHẦN 7: THỐNG KÊ (STATS)
+========================================= */
+.stats-section {
+  display: flex;
+  justify-content: space-around;
+  padding: 80px 50px;
+  background-color: #2563eb; /* Đổi sang nền xanh chữ trắng cho nổi bật */
+  color: white;
+}
+
+.stat-item h2 {
+  font-size: 56px;
+  color: #ffffff;
+  margin-bottom: 10px;
+  font-weight: 800;
+}
+
+.stat-item p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Animation cho thợ */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
