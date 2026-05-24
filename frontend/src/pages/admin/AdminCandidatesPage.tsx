@@ -13,12 +13,12 @@ export default function AdminCandidatesPage() {
   return (
     <div className="page-stack">
       <PageIntro
-        eyebrow="Admin candidates"
-        title="Candidate quality and account status"
-        description="Separate admin view for worker verification, capacity and application volume."
+        eyebrow="Quản trị thợ"
+        title="Chất lượng thợ và trạng thái tài khoản"
+        description="Màn hình riêng để kiểm tra xác minh, năng lực phục vụ và số lượt ứng tuyển."
       />
 
-      <Surface title="Candidate accounts" subtitle="Result from GET /api/admin/candidates">
+      <Surface title="Tài khoản thợ dịch vụ" subtitle="Dữ liệu từ GET /api/admin/candidates">
         <div className="table-like">
           {candidates.map((item) => (
             <div key={item.code} className="table-row">
@@ -26,8 +26,8 @@ export default function AdminCandidatesPage() {
                 <strong>{item.name}</strong>
                 <small>{item.headline}</small>
               </span>
-              <span>{item.totalApplications} applications</span>
-              <span>{item.rating.toFixed(1)} rating</span>
+              <span>{item.totalApplications} lượt ứng tuyển</span>
+              <span>{item.rating.toFixed(1)} điểm đánh giá</span>
               <div className="stack-inline">
                 <StatusBadge value={item.availability} />
                 <StatusBadge value={item.verified ? "verified" : "pending"} />

@@ -13,12 +13,12 @@ export default function AdminJobsPage() {
   return (
     <div className="page-stack">
       <PageIntro
-        eyebrow="Admin jobs"
-        title="Moderation queue and live inventory"
-        description="Admin sees more statuses than user side, including pending and rejected jobs."
+        eyebrow="Quản trị yêu cầu"
+        title="Hàng chờ kiểm duyệt và danh sách đang mở"
+        description="Quản trị viên theo dõi đầy đủ trạng thái, gồm chờ duyệt và bị từ chối."
       />
 
-      <Surface title="Job inventory" subtitle="Result from GET /api/admin/jobs">
+      <Surface title="Danh sách yêu cầu" subtitle="Dữ liệu từ GET /api/admin/jobs">
         <div className="table-like">
           {jobs.map((job) => (
             <div key={job.code} className="table-row">
@@ -28,7 +28,7 @@ export default function AdminJobsPage() {
                   {job.companyName} · {job.categoryName}
                 </small>
               </span>
-              <span>{job.applicantsCount} applicants</span>
+              <span>{job.applicantsCount} lượt nhận</span>
               <div className="stack-inline">
                 <StatusBadge value={job.status} />
                 <StatusBadge value={job.urgency} />

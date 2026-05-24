@@ -16,12 +16,12 @@ export default function UserWorkspacePage() {
   return (
     <div className="page-stack">
       <PageIntro
-        eyebrow="Workspace"
-        title="Candidate applications and assigned orders"
-        description="This page shows how the user side consumes two separate API resources."
+        eyebrow="Lịch sử"
+        title="Lịch sử đặt dịch vụ và đơn đang xử lý"
+        description="Theo dõi yêu cầu đã nhận, lịch hẹn dịch vụ và trạng thái thanh toán tại một nơi."
       />
 
-      <Surface title="Applications" subtitle="Pulled from /api/user/applications">
+      <Surface title="Yêu cầu dịch vụ" subtitle="Các yêu cầu bạn đã tương tác">
         <div className="table-like">
           {applications.map((item) => (
             <div key={item.code} className="table-row">
@@ -36,7 +36,7 @@ export default function UserWorkspacePage() {
         </div>
       </Surface>
 
-      <Surface title="Orders" subtitle="Pulled from /api/user/orders">
+      <Surface title="Đơn dịch vụ" subtitle="Các đơn đã lên lịch hoặc đã hoàn thành">
         <div className="table-like">
           {orders.map((order) => (
             <div key={order.code} className="table-row">

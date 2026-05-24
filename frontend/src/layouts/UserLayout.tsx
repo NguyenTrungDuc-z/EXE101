@@ -1,21 +1,20 @@
 import { NavLink, Outlet } from "react-router-dom";
 
 const links = [
-  { to: "/", label: "Home", end: true },
-  { to: "/user/jobs", label: "Jobs" },
-  { to: "/user/workspace", label: "My workspace" },
-  { to: "/user/post-job", label: "Post a job" }
+  { to: "/", label: "Dịch vụ", end: true },
+  { to: "/user/jobs", label: "Khám phá" },
+  { to: "/user/workspace", label: "Lịch sử" },
+  { to: "/user/post-job", label: "Đặt ngay" }
 ];
 
 export default function UserLayout() {
   return (
-    <div className="shell shell-user">
-      <aside className="sidebar">
-        <div className="brand-block">
-          <span className="brand-kicker">User workspace</span>
-          <h2>ViecNhanh</h2>
-          <p>Fast jobs marketplace for employers, workers and service operations.</p>
-        </div>
+    <div className="app-frame shell-user">
+      <header className="topbar">
+        <NavLink to="/" end className="brand-mark">
+          <span className="brand-icon">NN</span>
+          <strong>Nhà<span>Nhanh</span></strong>
+        </NavLink>
         <nav className="nav-stack">
           {links.map((link) => (
             <NavLink key={link.to} to={link.to} end={link.end} className="nav-link">
@@ -23,11 +22,7 @@ export default function UserLayout() {
             </NavLink>
           ))}
         </nav>
-        <div className="sidebar-note">
-          <strong>Current demo roles</strong>
-          <p>User side is wired for one employer and one candidate until auth is added.</p>
-        </div>
-      </aside>
+      </header>
       <main className="content">
         <Outlet />
       </main>

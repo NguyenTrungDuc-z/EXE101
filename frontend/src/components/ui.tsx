@@ -40,7 +40,33 @@ export function MetricTile({
 }
 
 export function StatusBadge({ value }: { value: string }) {
-  return <span className={`status-badge status-${value.toLowerCase()}`}>{value}</span>;
+  const labels: Record<string, string> = {
+    approved: "Đã duyệt",
+    paid: "Đã thanh toán",
+    confirmed: "Đã xác nhận",
+    verified: "Đã xác minh",
+    available: "Sẵn sàng",
+    growth: "Tăng trưởng",
+    done: "Hoàn tất",
+    completed: "Hoàn thành",
+    pending: "Chờ xử lý",
+    review: "Đang duyệt",
+    medium: "Trung bình",
+    open: "Đang mở",
+    starter: "Cơ bản",
+    new: "Mới",
+    high: "Cao",
+    rejected: "Từ chối",
+    failed: "Thất bại",
+    locked: "Đã khóa",
+    low: "Thấp",
+    shortlisted: "Đã chọn",
+    in_progress: "Đang xử lý",
+    in_service: "Đang phục vụ",
+    busy: "Đang bận"
+  };
+  const key = value.toLowerCase();
+  return <span className={`status-badge status-${key}`}>{labels[key] ?? value}</span>;
 }
 
 export function PageIntro({

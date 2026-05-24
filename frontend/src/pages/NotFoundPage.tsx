@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 export default function NotFoundPage() {
   return (
     <div className="page-stack">
-      <h1>Page not found</h1>
-      <p>This route is outside the rebuilt admin and user flows.</p>
+      <h1>Không tìm thấy trang</h1>
+      <p>Đường dẫn này nằm ngoài luồng người dùng và quản trị hiện tại.</p>
       <Link className="button primary" to="/">
-        Back to home
+        Về trang chủ
       </Link>
     </div>
   );

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MetricTile, PageIntro, Surface, StatusBadge } from "../../components/ui";
+import { MetricTile, Surface, StatusBadge } from "../../components/ui";
 import { platformApi } from "../../api/platformApi";
 import type { UserHome } from "../../types/platform";
 
@@ -24,41 +24,42 @@ export default function UserHomePage() {
 
   return (
     <div className="page-stack">
-      <PageIntro
-        eyebrow="User portal"
-        title="Marketplace view for jobs and delivery"
-        description="This side is for browsing live jobs, tracking applications and creating new requests."
-      />
+      <section className="home-hero">
+        <div className="home-hero-copy">
+          <h1>Dịch vụ gia đình tin cậy, đặt lịch tức thì</h1>
+          <p>Đặt thợ vệ sinh, kỹ thuật máy lạnh và sửa chữa tại nhà với giá rõ ràng, theo dõi tiến độ trực tiếp.</p>
+        </div>
+        <form className="hero-search-panel" onSubmit={handleSearchSubmit}>
+          <select aria-label="Chọn dịch vụ" defaultValue="">
+            <option value="" disabled>Chọn dịch vụ</option>
+            {data?.categories.map((category) => (
+              <option key={category.code} value={category.name}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Nhập khu vực"
+          />
+          <button type="submit" className="button primary search-btn">
+            Tìm kiếm
+          </button>
+        </form>
+      </section>
 
       {error ? <p className="feedback error">{error}</p> : null}
 
-      <Surface title="Quick Job Search" subtitle="Search across all live opportunities instantly">
-        <form className="hero-search-form" onSubmit={handleSearchSubmit}>
-          <div className="search-input-wrapper">
-            <svg className="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input 
-              type="text" 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
-              placeholder="Enter keywords (e.g. Delivery, Cleaner, Shipper...)" 
-              className="search-input"
-            />
-          </div>
-          <button type="submit" className="button primary search-btn">Search Jobs</button>
-        </form>
-      </Surface>
-
       <div className="metric-grid">
-        <MetricTile label="Open jobs" value={data?.hero.totalOpenJobs ?? "..."} />
-        <MetricTile label="Employers" value={data?.hero.totalEmployers ?? "..."} accent="teal" />
-        <MetricTile label="Candidates" value={data?.hero.totalCandidates ?? "..."} accent="blue" />
-        <MetricTile label="Active orders" value={data?.hero.activeOrders ?? "..."} accent="teal" />
+        <MetricTile label="Dịch vụ đang mở" value={data?.hero.totalOpenJobs ?? "..."} />
+        <MetricTile label="Khách hàng tin cậy" value={data?.hero.totalEmployers ?? "..."} accent="teal" />
+        <MetricTile label="Thợ đã xác minh" value={data?.hero.totalCandidates ?? "..."} accent="blue" />
+        <MetricTile label="Đơn đang xử lý" value={data?.hero.activeOrders ?? "..."} accent="teal" />
       </div>
 
-      <Surface title="Top categories" subtitle="Service lines currently active on the marketplace">
+      <Surface title="Dịch vụ phổ biến" subtitle="Các lựa chọn nhanh cho nhu cầu chăm sóc nhà cửa thường gặp">
         <div className="card-grid">
           {data?.categories.map((category) => (
             <article 
@@ -73,14 +74,14 @@ export default function UserHomePage() {
               <p>{category.averageBudgetLabel}</p>
               <small>{category.serviceType}</small>
               <div className="card-action-indicator">
-                Browse jobs &rarr;
+                Đặt ngay &rarr;
               </div>
             </article>
           ))}
         </div>
       </Surface>
 
-      <Surface title="Featured jobs" subtitle="Latest approved jobs visible to end users">
+      <Surface title="Yêu cầu đề xuất" subtitle="Các yêu cầu dịch vụ đang sẵn sàng ghép thợ">
         <div className="list-stack">
           {data?.featuredJobs.map((job) => (
             <article 
@@ -92,7 +93,7 @@ export default function UserHomePage() {
                 <h3>{job.title}</h3>
                 <p>{job.location}</p>
                 <div className="card-action-indicator">
-                  View details &rarr;
+                  Xem chi tiết &rarr;
                 </div>
               </div>
               <div className="list-meta">

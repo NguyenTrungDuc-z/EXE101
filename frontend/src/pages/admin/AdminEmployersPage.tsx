@@ -13,12 +13,12 @@ export default function AdminEmployersPage() {
   return (
     <div className="page-stack">
       <PageIntro
-        eyebrow="Admin employers"
-        title="Employer and KYC management"
-        description="Separate screen for company validation, package level and service coverage."
+        eyebrow="Quản trị khách hàng"
+        title="Quản lý khách hàng và xác minh KYC"
+        description="Màn hình kiểm tra hồ sơ, gói sử dụng và khu vực cung cấp dịch vụ."
       />
 
-      <Surface title="Employer accounts" subtitle="Result from GET /api/admin/employers">
+      <Surface title="Tài khoản khách hàng" subtitle="Dữ liệu từ GET /api/admin/employers">
         <div className="table-like">
           {employers.map((item) => (
             <div key={item.code} className="table-row">
@@ -28,7 +28,7 @@ export default function AdminEmployersPage() {
                   {item.name} · {item.city}
                 </small>
               </span>
-              <span>{item.totalJobs} jobs</span>
+              <span>{item.totalJobs} yêu cầu</span>
               <span>{item.walletBalance.toLocaleString()} VND</span>
               <div className="stack-inline">
                 <StatusBadge value={item.kycStatus} />

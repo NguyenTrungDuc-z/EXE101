@@ -50,7 +50,7 @@ export default function EmployerPostJobPage() {
         startDate: form.startDate
       });
 
-      setFeedback("Job submitted to pending review queue.");
+      setFeedback("Đã gửi yêu cầu dịch vụ vào hàng chờ duyệt.");
       setForm(initialState);
     } catch (reason) {
       setFeedback((reason as Error).message);
@@ -60,15 +60,15 @@ export default function EmployerPostJobPage() {
   return (
     <div className="page-stack">
       <PageIntro
-        eyebrow="Employer action"
-        title="Create a new job request"
-        description="This form calls POST /api/user/jobs and pushes the item into admin review."
+        eyebrow="Đặt lịch"
+        title="Tạo yêu cầu dịch vụ mới"
+        description="Gửi yêu cầu dịch vụ tại nhà vào hàng chờ kiểm duyệt vận hành."
       />
 
-      <Surface title="New job form" subtitle="Employer-facing API integration">
+      <Surface title="Thông tin đặt lịch" subtitle="Chọn loại dịch vụ, khu vực, thời gian và ngân sách">
         <form className="form-grid" onSubmit={submitForm}>
           <label>
-            Job title
+            Tên dịch vụ
             <input
               value={form.title}
               onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
@@ -76,13 +76,13 @@ export default function EmployerPostJobPage() {
             />
           </label>
           <label>
-            Category
+            Danh mục
             <select
               value={form.categoryCode}
               onChange={(event) => setForm((prev) => ({ ...prev, categoryCode: event.target.value }))}
               required
             >
-              <option value="">Select category</option>
+              <option value="">Chọn danh mục</option>
               {categories.map((category) => (
                 <option key={category.code} value={category.code}>
                   {category.name}
@@ -91,7 +91,7 @@ export default function EmployerPostJobPage() {
             </select>
           </label>
           <label>
-            Location
+            Khu vực
             <input
               value={form.location}
               onChange={(event) => setForm((prev) => ({ ...prev, location: event.target.value }))}
@@ -99,7 +99,7 @@ export default function EmployerPostJobPage() {
             />
           </label>
           <label>
-            Salary label
+            Nhãn giá
             <input
               value={form.salaryLabel}
               onChange={(event) => setForm((prev) => ({ ...prev, salaryLabel: event.target.value }))}
@@ -107,7 +107,7 @@ export default function EmployerPostJobPage() {
             />
           </label>
           <label>
-            Budget min
+            Ngân sách tối thiểu
             <input
               type="number"
               value={form.budgetMin}
@@ -116,7 +116,7 @@ export default function EmployerPostJobPage() {
             />
           </label>
           <label>
-            Budget max
+            Ngân sách tối đa
             <input
               type="number"
               value={form.budgetMax}
@@ -125,29 +125,29 @@ export default function EmployerPostJobPage() {
             />
           </label>
           <label>
-            Employment type
+            Hình thức dịch vụ
             <select
               value={form.employmentType}
               onChange={(event) => setForm((prev) => ({ ...prev, employmentType: event.target.value }))}
             >
-              <option value="task">task</option>
-              <option value="shift">shift</option>
-              <option value="contract">contract</option>
+              <option value="task">Theo việc</option>
+              <option value="shift">Theo ca</option>
+              <option value="contract">Theo hợp đồng</option>
             </select>
           </label>
           <label>
-            Urgency
+            Mức độ gấp
             <select
               value={form.urgency}
               onChange={(event) => setForm((prev) => ({ ...prev, urgency: event.target.value }))}
             >
-              <option value="low">low</option>
-              <option value="medium">medium</option>
-              <option value="high">high</option>
+              <option value="low">Thấp</option>
+              <option value="medium">Trung bình</option>
+              <option value="high">Cao</option>
             </select>
           </label>
           <label className="full-span">
-            Summary
+            Mô tả tóm tắt
             <textarea
               value={form.summary}
               onChange={(event) => setForm((prev) => ({ ...prev, summary: event.target.value }))}
@@ -155,15 +155,15 @@ export default function EmployerPostJobPage() {
             />
           </label>
           <label className="full-span">
-            Requirements
+            Yêu cầu
             <textarea
               value={form.requirements}
               onChange={(event) => setForm((prev) => ({ ...prev, requirements: event.target.value }))}
-              placeholder="One requirement per line"
+              placeholder="Mỗi yêu cầu một dòng"
             />
           </label>
           <label>
-            Start date
+            Thời gian bắt đầu
             <input
               type="datetime-local"
               value={form.startDate}
@@ -173,7 +173,7 @@ export default function EmployerPostJobPage() {
           </label>
           <div className="full-span action-row">
             <button className="button primary" type="submit">
-              Submit
+              Tiếp tục
             </button>
             {feedback ? <p className="feedback">{feedback}</p> : null}
           </div>

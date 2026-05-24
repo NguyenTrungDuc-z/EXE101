@@ -98,7 +98,7 @@ export default function UserJobsPage() {
         candidateCode: DEMO_CANDIDATE_CODE,
         note: "Ung tuyen tu user portal"
       });
-      setFeedback("Applied successfully.");
+      setFeedback("Đã nhận yêu cầu thành công.");
     } catch (reason) {
       setFeedback((reason as Error).message);
     }
@@ -107,23 +107,23 @@ export default function UserJobsPage() {
   return (
     <div className="page-stack">
       <PageIntro
-        eyebrow="Jobs"
-        title="Approved jobs for the user side"
-        description="Search by location, compare budgets and apply directly through the API."
+        eyebrow="Dịch vụ"
+        title="Khám phá yêu cầu dịch vụ tại nhà"
+        description="Tìm theo khu vực, so sánh ngân sách và xác nhận yêu cầu phù hợp."
       />
 
-      <Surface title="Filter jobs" subtitle="Client-side filtering on data returned from API">
+      <Surface title="Bộ lọc dịch vụ" subtitle="Lọc theo nhóm dịch vụ và khu vực để thu hẹp danh sách">
         <div className="filter-row">
           <input 
             value={search} 
             onChange={(event) => handleSearchChange(event.target.value)} 
-            placeholder="Search jobs" 
+            placeholder="Tìm dịch vụ hoặc khu vực" 
           />
           <select 
             value={category} 
             onChange={(event) => handleCategoryChange(event.target.value)}
           >
-            <option value="">All categories</option>
+            <option value="">Tất cả danh mục</option>
             {categories.map((item) => (
               <option key={item} value={item}>
                 {item}
@@ -135,7 +135,7 @@ export default function UserJobsPage() {
 
       {feedback ? <p className="feedback">{feedback}</p> : null}
 
-      <Surface title="Live opportunities" subtitle="Each card is already wired to backend create-application flow">
+      <Surface title="Đơn có thể nhận" subtitle="Danh sách đang kết nối với luồng máy chủ hiện tại">
         <div className="list-stack">
           {filteredJobs.map((job) => (
             <article key={job.code} className="job-card">
@@ -155,10 +155,10 @@ export default function UserJobsPage() {
               <p>{job.summary}</p>
               <div className="action-row">
                 <button className="button secondary" onClick={() => openJobDetail(job.code)}>
-                  Details
+                  Chi tiết
                 </button>
                 <button className="button primary" onClick={() => applyToJob(job.code)}>
-                  Apply
+                  Nhận đơn
                 </button>
               </div>
             </article>
@@ -180,25 +180,25 @@ export default function UserJobsPage() {
                 setSearchParams(newParams, { replace: true });
               }}
             >
-              Close
+              Đóng
             </button>
           }
         >
           <div className="detail-grid">
             <div>
-              <span className="detail-label">Budget</span>
+              <span className="detail-label">Ngân sách</span>
               <p>{selectedJob.salaryLabel}</p>
             </div>
             <div>
-              <span className="detail-label">Start date</span>
+              <span className="detail-label">Thời gian bắt đầu</span>
               <p>{new Date(selectedJob.startDate).toLocaleString()}</p>
             </div>
             <div>
-              <span className="detail-label">Service areas</span>
+              <span className="detail-label">Khu vực phục vụ</span>
               <p>{selectedJob.serviceAreas.join(", ")}</p>
             </div>
             <div>
-              <span className="detail-label">Applications</span>
+              <span className="detail-label">Lượt đăng ký</span>
               <p>{selectedJob.applicationsCount}</p>
             </div>
           </div>

@@ -13,12 +13,12 @@ export default function AdminOperationsPage() {
   return (
     <div className="page-stack">
       <PageIntro
-        eyebrow="Admin operations"
-        title="Operational tasks and alerts"
-        description="This screen separates explicit ops tickets from raw complaints and pending reviews."
+        eyebrow="Quản trị vận hành"
+        title="Tác vụ vận hành và cảnh báo"
+        description="Màn hình tách riêng phiếu vận hành, khiếu nại và các hồ sơ đang chờ duyệt."
       />
 
-      <Surface title="Operation tasks" subtitle="Result from GET /api/admin/operations">
+      <Surface title="Tác vụ vận hành" subtitle="Dữ liệu từ GET /api/admin/operations">
         <div className="table-like">
           {data?.tasks.map((task) => (
             <div key={task.code} className="table-row">
@@ -28,7 +28,7 @@ export default function AdminOperationsPage() {
                   {task.ownerTeam} · {task.relatedCode}
                 </small>
               </span>
-              <span>{task.slaHours}h SLA</span>
+              <span>{task.slaHours} giờ SLA</span>
               <div className="stack-inline">
                 <StatusBadge value={task.status} />
                 <StatusBadge value={task.priority} />
@@ -39,7 +39,7 @@ export default function AdminOperationsPage() {
       </Surface>
 
       <div className="card-grid">
-        <Surface title="Pending jobs" subtitle="Items waiting for moderation">
+        <Surface title="Yêu cầu chờ duyệt" subtitle="Các mục đang đợi kiểm duyệt">
           <div className="list-stack compact">
             {data?.alerts.pendingJobs.map((item) => (
               <article key={item.code} className="mini-card">
@@ -50,7 +50,7 @@ export default function AdminOperationsPage() {
           </div>
         </Surface>
 
-        <Surface title="KYC review" subtitle="Employer accounts waiting for checks">
+        <Surface title="Duyệt KYC" subtitle="Tài khoản khách hàng đang chờ kiểm tra">
           <div className="list-stack compact">
             {data?.alerts.reviewEmployers.map((item) => (
               <article key={item.code} className="mini-card">
@@ -62,7 +62,7 @@ export default function AdminOperationsPage() {
         </Surface>
       </div>
 
-      <Surface title="Complaints" subtitle="User-facing tickets separated from internal ops tasks">
+      <Surface title="Khiếu nại" subtitle="Phiếu người dùng được tách khỏi tác vụ vận hành nội bộ">
         <div className="table-like">
           {data?.alerts.complaints.map((complaint) => (
             <div key={complaint.code} className="table-row">
