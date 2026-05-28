@@ -28,6 +28,10 @@ export type Job = {
   startDate: string;
   createdAt: string;
   applicantsCount: number;
+  coverImage?: string;
+  ratingLabel?: string;
+  bookingCountLabel?: string;
+  displayPriceLabel?: string;
 };
 
 export type Employer = {
@@ -136,6 +140,30 @@ export type UserHome = {
   };
   categories: Category[];
   featuredJobs: Job[];
+  testimonials: Array<{
+    author: string;
+    rating: number;
+    comment: string;
+    image: string;
+    jobCode: string;
+    serviceTitle: string;
+  }>;
+};
+
+export type AuthUser = {
+  code: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  status: string;
+  city: string;
+  avatar: string;
+};
+
+export type LoginResponse = {
+  token: string;
+  user: AuthUser;
 };
 
 export type OperationsResponse = {
@@ -152,4 +180,20 @@ export type JobDetail = Job & {
   serviceAreas: string[];
   categoryName: string;
   applicationsCount: number;
+  gallery: string[];
+  unitLabel: string;
+  benefits: string[];
+  processSteps: string[];
+  qualityCommitments: string[];
+  reasons: string[];
+  reviews: Array<{
+    author: string;
+    rating: number;
+    comment: string;
+    image: string;
+  }>;
+  faqs: Array<{
+    question: string;
+    answer: string;
+  }>;
 };

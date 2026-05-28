@@ -1,22 +1,21 @@
 import { NavLink, Outlet } from "react-router-dom";
 
 const links = [
-  { to: "/admin", label: "Dashboard", end: true },
-  { to: "/admin/jobs", label: "Jobs" },
-  { to: "/admin/employers", label: "Employers" },
-  { to: "/admin/candidates", label: "Candidates" },
-  { to: "/admin/operations", label: "Operations" }
+  { to: "/admin", label: "Tổng quan", end: true },
+  { to: "/admin/jobs", label: "Yêu cầu" },
+  { to: "/admin/employers", label: "Khách hàng" },
+  { to: "/admin/candidates", label: "Thợ dịch vụ" },
+  { to: "/admin/operations", label: "Vận hành" }
 ];
 
 export default function AdminLayout() {
   return (
-    <div className="shell shell-admin">
-      <aside className="sidebar">
-        <div className="brand-block">
-          <span className="brand-kicker">Admin workspace</span>
-          <h2>ViecNhanh Ops</h2>
-          <p>Control tower for moderation, KYC and operational queues.</p>
-        </div>
+    <div className="app-frame shell-admin">
+      <header className="topbar">
+        <NavLink to="/admin" end className="brand-mark">
+          <span className="brand-icon" aria-hidden="true" />
+          <strong>Home<span>Swift</span> Vận hành</strong>
+        </NavLink>
         <nav className="nav-stack">
           {links.map((link) => (
             <NavLink key={link.to} to={link.to} end={link.end} className="nav-link">
@@ -24,7 +23,7 @@ export default function AdminLayout() {
             </NavLink>
           ))}
         </nav>
-      </aside>
+      </header>
       <main className="content">
         <Outlet />
       </main>

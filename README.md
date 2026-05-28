@@ -71,8 +71,8 @@ npm run dev:frontend
 
 ## Ghi chu
 
-- Prototype cu trong root `src/` va `public/` khong con la entry chinh.
-- API moi duoc tach ro route `admin` va `user`.
+- Code chinh nam trong `backend/` va `frontend/`.
+- API duoc tach ro route `auth`, `admin` va `user`.
 
 ## API split
 
@@ -86,6 +86,7 @@ npm run dev:frontend
 
 ### User API
 
+- `POST /api/auth/login`
 - `GET /api/user/home`
 - `GET /api/user/jobs`
 - `GET /api/user/jobs/:jobCode`
@@ -99,9 +100,12 @@ npm run dev:frontend
 ### User routes
 
 - `/`
+- `/about`
+- `/help`
 - `/user/jobs`
 - `/user/workspace`
-- `/user/post-job`
+- `/booking`
+- `/partner`
 
 ### Admin routes
 

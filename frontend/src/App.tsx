@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import type { ReactNode } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import AdminLayout from "./layouts/AdminLayout";
 import UserLayout from "./layouts/UserLayout";
 import AdminCandidatesPage from "./pages/admin/AdminCandidatesPage";
@@ -7,19 +8,42 @@ import AdminEmployersPage from "./pages/admin/AdminEmployersPage";
 import AdminJobsPage from "./pages/admin/AdminJobsPage";
 import AdminOperationsPage from "./pages/admin/AdminOperationsPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import AboutPage from "./pages/user/AboutPage";
 import EmployerPostJobPage from "./pages/user/EmployerPostJobPage";
+import HelpPage from "./pages/user/HelpPage";
+import LoginPage from "./pages/user/LoginPage";
+import PartnerPage from "./pages/user/PartnerPage";
 import UserHomePage from "./pages/user/UserHomePage";
 import UserJobsPage from "./pages/user/UserJobsPage";
 import UserWorkspacePage from "./pages/user/UserWorkspacePage";
+
+const AUTH_STORAGE_KEY = "homeswift_user";
+
+function RequireUser({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const isLoggedIn = Boolean(localStorage.getItem(AUTH_STORAGE_KEY));
+
+  if (!isLoggedIn) {
+    const redirect = `${location.pathname}${location.search}`;
+    return <Navigate to={`/login?redirect=${encodeURIComponent(redirect)}`} replace />;
+  }
+
+  return children;
+}
 
 export default function App() {
   return (
     <Routes>
       <Route element={<UserLayout />}>
         <Route path="/" element={<UserHomePage />} />
+        <Route path="/about" element={<AboutPage />} />
         <Route path="/user/jobs" element={<UserJobsPage />} />
         <Route path="/user/workspace" element={<UserWorkspacePage />} />
-        <Route path="/user/post-job" element={<EmployerPostJobPage />} />
+        <Route path="/booking" element={<RequireUser><EmployerPostJobPage /></RequireUser>} />
+        <Route path="/partner" element={<PartnerPage />} />
+        <Route path="/user/post-job" element={<Navigate to="/partner" replace />} />
+        <Route path="/help" element={<HelpPage />} />
+        <Route path="/login" element={<LoginPage />} />
       </Route>
 
       <Route path="/admin" element={<AdminLayout />}>
