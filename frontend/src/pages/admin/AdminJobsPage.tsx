@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { platformApi } from "../../api/platformApi";
 import { PageIntro, StatusBadge, Surface } from "../../components/ui";
 import type { Job } from "../../types/platform";
+import { viText } from "../../utils/vietnameseText";
 
 export default function AdminJobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -18,14 +19,14 @@ export default function AdminJobsPage() {
         description="Quản trị viên theo dõi đầy đủ trạng thái, gồm chờ duyệt và bị từ chối."
       />
 
-      <Surface title="Danh sách yêu cầu" subtitle="Dữ liệu từ GET /api/admin/jobs">
+      <Surface title="Danh sách yêu cầu" subtitle="Dữ liệu từ hệ thống quản trị">
         <div className="table-like">
           {jobs.map((job) => (
             <div key={job.code} className="table-row">
               <span>
-                <strong>{job.title}</strong>
+                <strong>{viText(job.title)}</strong>
                 <small>
-                  {job.companyName} · {job.categoryName}
+                  {viText(job.companyName)} · {viText(job.categoryName)}
                 </small>
               </span>
               <span>{job.applicantsCount} lượt nhận</span>

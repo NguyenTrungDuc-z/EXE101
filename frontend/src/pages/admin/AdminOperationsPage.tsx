@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { platformApi } from "../../api/platformApi";
 import { PageIntro, StatusBadge, Surface } from "../../components/ui";
 import type { OperationsResponse } from "../../types/platform";
+import { viText } from "../../utils/vietnameseText";
 
 export default function AdminOperationsPage() {
   const [data, setData] = useState<OperationsResponse | null>(null);
@@ -18,14 +19,14 @@ export default function AdminOperationsPage() {
         description="Màn hình tách riêng phiếu vận hành, khiếu nại và các hồ sơ đang chờ duyệt."
       />
 
-      <Surface title="Tác vụ vận hành" subtitle="Dữ liệu từ GET /api/admin/operations">
+      <Surface title="Tác vụ vận hành" subtitle="Dữ liệu từ hệ thống quản trị">
         <div className="table-like">
           {data?.tasks.map((task) => (
             <div key={task.code} className="table-row">
               <span>
-                <strong>{task.title}</strong>
+                <strong>{viText(task.title)}</strong>
                 <small>
-                  {task.ownerTeam} · {task.relatedCode}
+                  {viText(task.ownerTeam)} · {task.relatedCode}
                 </small>
               </span>
               <span>{task.slaHours} giờ SLA</span>
@@ -43,7 +44,7 @@ export default function AdminOperationsPage() {
           <div className="list-stack compact">
             {data?.alerts.pendingJobs.map((item) => (
               <article key={item.code} className="mini-card">
-                <h3>{item.title}</h3>
+                <h3>{viText(item.title)}</h3>
                 <small>{item.code}</small>
               </article>
             ))}
@@ -54,7 +55,7 @@ export default function AdminOperationsPage() {
           <div className="list-stack compact">
             {data?.alerts.reviewEmployers.map((item) => (
               <article key={item.code} className="mini-card">
-                <h3>{item.title}</h3>
+                <h3>{viText(item.title)}</h3>
                 <small>{item.code}</small>
               </article>
             ))}
@@ -67,8 +68,8 @@ export default function AdminOperationsPage() {
           {data?.alerts.complaints.map((complaint) => (
             <div key={complaint.code} className="table-row">
               <span>
-                <strong>{complaint.type}</strong>
-                <small>{complaint.message}</small>
+                <strong>{viText(complaint.type)}</strong>
+                <small>{viText(complaint.message)}</small>
               </span>
               <span>{complaint.targetCode}</span>
               <StatusBadge value={complaint.status} />

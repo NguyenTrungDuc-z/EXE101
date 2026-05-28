@@ -5,6 +5,7 @@ import type {
   Employer,
   Job,
   JobDetail,
+  LoginResponse,
   OperationsResponse,
   Order,
   UserHome
@@ -12,6 +13,11 @@ import type {
 import { apiFetch } from "./client";
 
 export const platformApi = {
+  login: (payload: { phone: string }) =>
+    apiFetch<LoginResponse>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
   getAdminOverview: () => apiFetch<AdminOverview>("/admin/overview"),
   getAdminJobs: () => apiFetch<Job[]>("/admin/jobs"),
   getAdminEmployers: () => apiFetch<Employer[]>("/admin/employers"),

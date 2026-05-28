@@ -13,8 +13,8 @@ export default function AdminLayout() {
     <div className="app-frame shell-admin">
       <header className="topbar">
         <NavLink to="/admin" end className="brand-mark">
-          <span className="brand-icon">NN</span>
-          <strong>Nhà<span>Nhanh</span> Vận hành</strong>
+          <span className="brand-icon" aria-hidden="true" />
+          <strong>Home<span>Swift</span> Vận hành</strong>
         </NavLink>
         <nav className="nav-stack">
           {links.map((link) => (

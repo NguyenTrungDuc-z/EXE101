@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { platformApi } from "../../api/platformApi";
 import { MetricTile, PageIntro, Surface, StatusBadge } from "../../components/ui";
 import type { AdminOverview } from "../../types/platform";
+import { viText } from "../../utils/vietnameseText";
 
 const dashboardLabels: Record<string, string> = {
   "Nguoi dung": "Người dùng",
@@ -65,10 +66,10 @@ export default function AdminDashboardPage() {
           {data?.recentJobs.map((job) => (
             <div key={job.code} className="table-row">
               <span>
-                <strong>{job.title}</strong>
-                <small>{job.location}</small>
+                <strong>{viText(job.title)}</strong>
+                <small>{viText(job.location)}</small>
               </span>
-              <span>{job.salaryLabel}</span>
+              <span>{viText(job.salaryLabel)}</span>
               <StatusBadge value={job.status} />
             </div>
           ))}

@@ -1,26 +1,79 @@
 import { NavLink, Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+
+const AUTH_STORAGE_KEY = "homeswift_user";
 
 const links = [
-  { to: "/", label: "Dịch vụ", end: true },
-  { to: "/user/jobs", label: "Khám phá" },
-  { to: "/user/workspace", label: "Lịch sử" },
-  { to: "/user/post-job", label: "Đặt ngay" }
+  { to: "/", label: "Trang chủ", end: true },
+  { to: "/user/jobs", label: "Dịch vụ" },
+  { to: "/help", label: "Trợ giúp" },
+  { to: "/about", label: "Về chúng tôi" },
+  { to: "/partner", label: "Trở thành đối tác" },
+  { to: "/login", label: "Đăng nhập", authOnly: false },
+  { to: "/booking", label: "Đặt lịch ngay" }
 ];
 
+type StoredUser = {
+  name: string;
+  avatar: string;
+};
+
+function readStoredUser() {
+  const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw) as StoredUser;
+  } catch {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    return null;
+  }
+}
+
 export default function UserLayout() {
+  const [user, setUser] = useState<StoredUser | null>(() => readStoredUser());
+
+  useEffect(() => {
+    const syncUser = () => setUser(readStoredUser());
+    window.addEventListener("storage", syncUser);
+    window.addEventListener("homeswift-auth", syncUser);
+    return () => {
+      window.removeEventListener("storage", syncUser);
+      window.removeEventListener("homeswift-auth", syncUser);
+    };
+  }, []);
+
   return (
     <div className="app-frame shell-user">
       <header className="topbar">
         <NavLink to="/" end className="brand-mark">
-          <span className="brand-icon">NN</span>
-          <strong>Nhà<span>Nhanh</span></strong>
+          <span className="brand-icon" aria-hidden="true" />
+          <strong>Home<span>Swift</span></strong>
         </NavLink>
         <nav className="nav-stack">
-          {links.map((link) => (
-            <NavLink key={link.to} to={link.to} end={link.end} className="nav-link">
-              {link.label}
-            </NavLink>
-          ))}
+          {links.map((link, index) => {
+            if (user && link.to === "/login") {
+              return null;
+            }
+
+            return (
+              <NavLink key={`${link.to}-${index}`} to={link.to} end={link.end} className="nav-link">
+                {link.label}
+              </NavLink>
+            );
+          })}
+          {user ? (
+            <div className="profile-actions">
+              <button className="notification-button" type="button" aria-label="Thông báo">
+                <span />
+              </button>
+              <NavLink to="/user/workspace" className="profile-avatar-link" aria-label="Mở hồ sơ cá nhân">
+                <img src={user.avatar} alt={user.name} />
+              </NavLink>
+            </div>
+          ) : null}
         </nav>
       </header>
       <main className="content">

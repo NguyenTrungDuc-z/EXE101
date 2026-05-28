@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { platformApi } from "../../api/platformApi";
 import { PageIntro, StatusBadge, Surface } from "../../components/ui";
 import type { Employer } from "../../types/platform";
+import { viText } from "../../utils/vietnameseText";
 
 export default function AdminEmployersPage() {
   const [employers, setEmployers] = useState<Employer[]>([]);
@@ -18,14 +19,14 @@ export default function AdminEmployersPage() {
         description="Màn hình kiểm tra hồ sơ, gói sử dụng và khu vực cung cấp dịch vụ."
       />
 
-      <Surface title="Tài khoản khách hàng" subtitle="Dữ liệu từ GET /api/admin/employers">
+      <Surface title="Tài khoản khách hàng" subtitle="Dữ liệu từ hệ thống quản trị">
         <div className="table-like">
           {employers.map((item) => (
             <div key={item.code} className="table-row">
               <span>
-                <strong>{item.companyName}</strong>
+                <strong>{viText(item.companyName)}</strong>
                 <small>
-                  {item.name} · {item.city}
+                  {viText(item.name)} · {viText(item.city)}
                 </small>
               </span>
               <span>{item.totalJobs} yêu cầu</span>
