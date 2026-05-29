@@ -113,4 +113,4 @@ npm run dev:frontend
 - `/admin/jobs`
 - `/admin/employers`
 - `/admin/candidates`
-- `/admin/operations`
+- `/admin/operationsss`
