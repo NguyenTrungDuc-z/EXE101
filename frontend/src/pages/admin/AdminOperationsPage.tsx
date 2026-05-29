@@ -6,18 +6,83 @@ import { viText } from "../../utils/vietnameseText";
 
 export default function AdminOperationsPage() {
   const [data, setData] = useState<OperationsResponse | null>(null);
+  const [feedback, setFeedback] = useState("");
+
+  const loadOperations = () => {
+    platformApi.getAdminOperations().then(setData);
+  };
 
   useEffect(() => {
-    platformApi.getAdminOperations().then(setData);
+    loadOperations();
   }, []);
+
+  const approveEscrow = async (orderCode: string) => {
+    setFeedback("");
+    try {
+      await platformApi.approveEscrowPayment(orderCode);
+      setFeedback(`Đã duyệt tiền cho đơn ${orderCode}.`);
+      loadOperations();
+    } catch (reason) {
+      setFeedback((reason as Error).message);
+    }
+  };
+
+  const approveWithdrawal = async (paymentCode: string) => {
+    setFeedback("");
+    try {
+      await platformApi.approveWithdrawal(paymentCode);
+      setFeedback(`Đã duyệt rút tiền ${paymentCode}.`);
+      loadOperations();
+    } catch (reason) {
+      setFeedback((reason as Error).message);
+    }
+  };
 
   return (
     <div className="page-stack">
       <PageIntro
         eyebrow="Quản trị vận hành"
         title="Tác vụ vận hành và cảnh báo"
-        description="Màn hình tách riêng phiếu vận hành, khiếu nại và các hồ sơ đang chờ duyệt."
+        description="Theo dõi duyệt tiền escrow, yêu cầu rút tiền, khiếu nại và các hồ sơ đang chờ xử lý."
       />
+
+      {feedback ? <p className="feedback">{feedback}</p> : null}
+
+      <div className="card-grid">
+        <Surface title="Duyệt tiền Escrow" subtitle="Khách đã bấm Tôi đã chuyển khoản">
+          <div className="list-stack compact">
+            {data?.alerts.escrowOrders.map((item) => (
+              <article key={item.code} className="mini-card">
+                <h3>{item.code}</h3>
+                <small>{item.transferContent}</small>
+                <strong>{item.amount.toLocaleString("vi-VN")}đ</strong>
+                <small>{viText(item.address)}</small>
+                <button className="button primary" type="button" onClick={() => approveEscrow(item.code)}>
+                  Duyệt tiền
+                </button>
+              </article>
+            ))}
+            {!data?.alerts.escrowOrders.length ? <p>Không có đơn chờ duyệt tiền.</p> : null}
+          </div>
+        </Surface>
+
+        <Surface title="Duyệt rút tiền" subtitle="Thợ đã gửi yêu cầu rút ví">
+          <div className="list-stack compact">
+            {data?.alerts.withdrawals.map((item) => (
+              <article key={item.code} className="mini-card">
+                <h3>{item.code}</h3>
+                <small>{item.userCode}</small>
+                <strong>{item.amount.toLocaleString("vi-VN")}đ</strong>
+                <small>{item.method}</small>
+                <button className="button primary" type="button" onClick={() => approveWithdrawal(item.code)}>
+                  Duyệt rút tiền
+                </button>
+              </article>
+            ))}
+            {!data?.alerts.withdrawals.length ? <p>Không có yêu cầu rút tiền.</p> : null}
+          </div>
+        </Surface>
+      </div>
 
       <Surface title="Tác vụ vận hành" subtitle="Dữ liệu từ hệ thống quản trị">
         <div className="table-like">

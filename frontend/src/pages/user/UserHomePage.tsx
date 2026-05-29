@@ -11,9 +11,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Phone,
-  Facebook,
-  Instagram,
-  Youtube,
+  // Facebook,
+  // Instagram,
+  // Youtube,
   Smartphone,
   Star,
   Globe,
@@ -26,6 +26,12 @@ const homeServices = [
   { label: "Vệ sinh", Icon: Sparkles, category: "Don dep nha" },
   { label: "Điều hòa", Icon: Wind, category: "Ve sinh may lanh" },
   { label: "Sửa chữa", Icon: Wrench, category: "Dien nuoc" },
+];
+
+const featuredHomeServices = [
+  { label: "Vệ sinh", Icon: Sparkles, search: "ve sinh" },
+  { label: "Điều hòa", Icon: Wind, category: "Ve sinh may lanh" },
+  { label: "Sửa chữa", Icon: Wrench, category: "Sua dien nuoc" },
 ];
 
 export default function UserHomePage() {
@@ -75,9 +81,13 @@ export default function UserHomePage() {
     );
   };
 
-  const goToServices = (categoryName?: string) => {
+  const goToServices = (categoryName?: string, directSearch?: string) => {
     const params = new URLSearchParams();
-    if (searchQuery.trim()) params.set("search", searchQuery.trim());
+    if (directSearch) {
+      params.set("search", directSearch);
+    } else if (searchQuery.trim()) {
+      params.set("search", searchQuery.trim());
+    }
     if (categoryName || selectedCategory)
       params.set("categoryName", categoryName || selectedCategory);
     navigate(`/user/jobs${params.toString() ? `?${params.toString()}` : ""}`);
@@ -112,7 +122,7 @@ export default function UserHomePage() {
             type="text"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="[Địa chỉ của bạn]"
+            placeholder="[Nhập từ khóa hoặc địa chỉ của bạn]"
           />
           <button type="submit" className="button primary search-btn">
             <Search size={20} style={{ marginRight: "8px" }} />
@@ -125,11 +135,11 @@ export default function UserHomePage() {
 
       <section className="services-showcase">
         <div className="service-card-grid">
-          {homeServices.map(({ label, Icon, category }) => (
+          {featuredHomeServices.map(({ label, Icon, category, search }) => (
             <article
               key={label}
               className="service-card interactive"
-              onClick={() => goToServices(category)}
+              onClick={() => goToServices(category, search)}
             >
               <div className="service-icon">
                 <Icon size={32} />
@@ -237,7 +247,7 @@ export default function UserHomePage() {
             homeswift.com
           </p>
         </div>
-        <div>
+        {/* <div>
           <h3>Mạng xã hội</h3>
           <div className="social-row">
             <a href="#" aria-label="Facebook">
@@ -250,7 +260,7 @@ export default function UserHomePage() {
               <Youtube size={20} />
             </a>
           </div>
-        </div>
+        </div> */}
         <div>
           <h3>Tải ứng dụng iOS</h3>
           <div className="store-badge">

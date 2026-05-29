@@ -23,6 +23,7 @@ export default function UserJobsPage() {
   const [page, setPage] = useState(1);
   const [feedback, setFeedback] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [selectedVariantCode, setSelectedVariantCode] = useState("");
   const navigate = useNavigate();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -117,6 +118,7 @@ export default function UserJobsPage() {
       const detail = await platformApi.getUserJobDetail(jobCode);
       setSelectedJob(detail);
       setQuantity(1);
+      setSelectedVariantCode(detail.serviceVariants[0]?.code ?? "");
       if (updateUrl) {
         const newParams = new URLSearchParams(searchParams);
         newParams.set("jobCode", jobCode);
@@ -157,7 +159,22 @@ export default function UserJobsPage() {
   };
 
   if (selectedJob) {
-    const estimatedTotal = selectedJob.budgetMin * quantity;
+    const selectedVariant = selectedJob.serviceVariants.find((item) => item.code === selectedVariantCode) ?? selectedJob.serviceVariants[0];
+    const isRangePrice = selectedVariant?.pricingType === "range";
+    const rangeTotalMin = (selectedVariant?.priceMin ?? selectedJob.budgetMin) * quantity;
+    const rangeTotalMax = (selectedVariant?.priceMax ?? selectedJob.budgetMax) * quantity;
+    const unitPrice = isRangePrice ? (selectedVariant?.priceMin ?? selectedJob.budgetMin) : (selectedVariant?.price ?? selectedJob.budgetMin);
+    const estimatedTotal = unitPrice * quantity;
+    const bookingParams = new URLSearchParams({
+      jobCode: selectedJob.code,
+      quantity: String(quantity),
+      variantCode: selectedVariant?.code ?? "",
+      machineType: selectedVariant?.name ?? "",
+      unitPrice: String(unitPrice),
+      pricingType: selectedVariant?.pricingType ?? "fixed",
+      priceMin: String(selectedVariant?.priceMin ?? unitPrice),
+      priceMax: String(selectedVariant?.priceMax ?? unitPrice)
+    });
 
     return (
       <div className="service-detail-page">
@@ -187,10 +204,16 @@ export default function UserJobsPage() {
               <BookingCard
                 quantity={quantity}
                 unitLabel={selectedJob.unitLabel}
+                variants={selectedJob.serviceVariants}
+                selectedVariantCode={selectedVariantCode}
+                onVariantChange={setSelectedVariantCode}
                 total={estimatedTotal}
+                rangeTotalMin={rangeTotalMin}
+                rangeTotalMax={rangeTotalMax}
+                isRangePrice={isRangePrice}
                 onDecrease={() => setQuantity((current) => Math.max(1, current - 1))}
                 onIncrease={() => setQuantity((current) => current + 1)}
-                onSubmit={() => navigate(`/booking?jobCode=${selectedJob.code}&quantity=${quantity}`)}
+                onSubmit={() => navigate(`/booking?${bookingParams.toString()}`)}
               />
             </section>
 
@@ -234,10 +257,16 @@ export default function UserJobsPage() {
             <BookingCard
               quantity={quantity}
               unitLabel={selectedJob.unitLabel}
+              variants={selectedJob.serviceVariants}
+              selectedVariantCode={selectedVariantCode}
+              onVariantChange={setSelectedVariantCode}
               total={estimatedTotal}
+              rangeTotalMin={rangeTotalMin}
+              rangeTotalMax={rangeTotalMax}
+              isRangePrice={isRangePrice}
               onDecrease={() => setQuantity((current) => Math.max(1, current - 1))}
               onIncrease={() => setQuantity((current) => current + 1)}
-              onSubmit={() => navigate(`/booking?jobCode=${selectedJob.code}&quantity=${quantity}`)}
+              onSubmit={() => navigate(`/booking?${bookingParams.toString()}`)}
             />
           </aside>
         </section>
@@ -301,12 +330,7 @@ export default function UserJobsPage() {
   return (
     <div className="services-page">
       <section className="services-hero">
-        <span className="services-hero-eyebrow">
-          <Search size={14} />
-          Tìm kiếm dịch vụ
-        </span>
-        <h1>Dịch vụ gia đình chuyên nghiệp</h1>
-        <p className="services-hero-sub">Tìm và đặt lịch dịch vụ phù hợp nhanh chóng, tiện lợi</p>
+        <h1>Kết quả tìm kiếm phù hợp</h1>
         <form
           className="services-search"
           onSubmit={(event) => {
@@ -521,7 +545,6 @@ function ServiceProductCard({ job, onOpen, compact = false }: { job: Job; onOpen
     <article className={`service-product-card ${compact ? "compact" : ""}`} onClick={() => onOpen(job.code)}>
       <div className="product-image-wrapper">
         <img src={job.coverImage} alt={viText(job.title)} />
-        <span className="product-category-badge">{viText(job.categoryName)}</span>
       </div>
       <div className="service-product-body">
         <h3>{viText(job.title)}</h3>
@@ -552,14 +575,26 @@ function ServiceProductCard({ job, onOpen, compact = false }: { job: Job; onOpen
 function BookingCard({
   quantity,
   unitLabel,
+  variants,
+  selectedVariantCode,
+  onVariantChange,
   total,
+  rangeTotalMin,
+  rangeTotalMax,
+  isRangePrice,
   onDecrease,
   onIncrease,
   onSubmit
 }: {
   quantity: number;
   unitLabel: string;
+  variants: JobDetail["serviceVariants"];
+  selectedVariantCode: string;
+  onVariantChange: (value: string) => void;
   total: number;
+  rangeTotalMin: number;
+  rangeTotalMax: number;
+  isRangePrice: boolean;
   onDecrease: () => void;
   onIncrease: () => void;
   onSubmit: () => void;
@@ -582,7 +617,27 @@ function BookingCard({
           </button>
         </div>
       </div>
-      <p>Tổng tiền tạm tính: <strong>{total.toLocaleString()} VND</strong></p>
+      <label className="booking-machine-type">
+        Loại {unitLabel}
+        <select value={selectedVariantCode} onChange={(event) => onVariantChange(event.target.value)}>
+          {variants.map((variant) => (
+            <option key={variant.code} value={variant.code}>
+              {variant.name} - {variant.pricingType === "range"
+                ? `${(variant.priceMin ?? 0).toLocaleString()}đ - ${(variant.priceMax ?? 0).toLocaleString()}đ`
+                : `${(variant.price ?? 0).toLocaleString()}đ`}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p>
+        {isRangePrice ? "Giá tham khảo: " : "Tổng tiền tạm tính: "}
+        <strong>
+          {isRangePrice
+            ? `${rangeTotalMin.toLocaleString()} - ${rangeTotalMax.toLocaleString()} VND`
+            : `${total.toLocaleString()} VND`}
+        </strong>
+      </p>
+      {isRangePrice ? <small>Loại này cần thợ đến khảo sát để chốt giá chính xác.</small> : null}
       <button className="button primary" type="button" onClick={onSubmit}>
         <CalendarCheck size={18} style={{ marginRight: 6 }} />
         Đặt lịch ngay

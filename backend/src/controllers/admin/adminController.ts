@@ -145,11 +145,13 @@ export async function listAdminCandidates(_request: Request, response: Response)
 }
 
 export async function listAdminOperations(_request: Request, response: Response) {
-  const [tasks, complaints, pendingJobs, reviewEmployers] = await Promise.all([
+  const [tasks, complaints, pendingJobs, reviewEmployers, escrowOrders, withdrawalPayments] = await Promise.all([
     OperationTaskModel.find().sort({ createdAt: -1 }).lean(),
     ComplaintModel.find().sort({ createdAt: -1 }).lean(),
     JobPostModel.find({ status: "pending" }).lean(),
-    EmployerProfileModel.find({ kycStatus: "review" }).lean()
+    EmployerProfileModel.find({ kycStatus: "review" }).lean(),
+    OrderModel.find({ status: "payment_review" }).sort({ scheduledAt: 1 }).lean(),
+    PaymentModel.find({ type: "wallet_withdraw", status: "pending" }).sort({ createdAt: -1 }).lean()
   ]);
 
   response.json({
@@ -165,7 +167,89 @@ export async function listAdminOperations(_request: Request, response: Response)
         title: profile.companyName,
         type: "kyc_review"
       })),
+      escrowOrders: escrowOrders.map((order) => ({
+        code: order.code,
+        title: `Duyệt tiền ${order.code}`,
+        amount: order.totalAmount,
+        transferContent: `HOMESWIFT ${order.code.replace(/^ORD-/, "BAN")}`,
+        address: order.address,
+        status: order.status
+      })),
+      withdrawals: withdrawalPayments.map((payment) => ({
+        code: payment.code,
+        userCode: payment.payerCode,
+        amount: payment.amount,
+        method: payment.method,
+        status: payment.status,
+        createdAt: payment.createdAt
+      })),
       complaints
     }
   });
+}
+
+export async function approveEscrowPayment(request: Request, response: Response) {
+  const { orderCode } = request.params;
+  const order = await OrderModel.findOne({ code: orderCode });
+
+  if (!order) {
+    response.status(404).json({ message: "Không tìm thấy đơn hàng." });
+    return;
+  }
+
+  if (order.status !== "payment_review") {
+    response.status(400).json({ message: "Đơn hàng không ở trạng thái chờ duyệt tiền." });
+    return;
+  }
+
+  order.status = "finding_worker";
+  order.paymentStatus = "paid";
+  order.frozenBalance = order.totalAmount;
+  await order.save();
+
+  await PaymentModel.updateMany(
+    { orderCode: order.code, type: "service_booking" },
+    { $set: { status: "paid" } }
+  );
+
+  await OperationTaskModel.updateMany(
+    { relatedCode: order.code, type: "escrow_payment_review" },
+    { $set: { status: "done" } }
+  );
+
+  response.json(order);
+}
+
+export async function approveWithdrawal(request: Request, response: Response) {
+  const { paymentCode } = request.params;
+  const payment = await PaymentModel.findOne({ code: paymentCode, type: "wallet_withdraw" });
+
+  if (!payment) {
+    response.status(404).json({ message: "Không tìm thấy yêu cầu rút tiền." });
+    return;
+  }
+
+  const user = await UserModel.findOne({ code: payment.payerCode });
+  if (!user) {
+    response.status(404).json({ message: "Không tìm thấy người dùng rút tiền." });
+    return;
+  }
+
+  if ((user.walletBalance ?? 0) < payment.amount) {
+    response.status(400).json({ message: "Số dư ví không đủ để duyệt rút tiền." });
+    return;
+  }
+
+  user.walletBalance = (user.walletBalance ?? 0) - payment.amount;
+  await user.save();
+
+  payment.status = "paid";
+  await payment.save();
+
+  await OperationTaskModel.updateMany(
+    { relatedCode: payment.code, type: "wallet_withdrawal" },
+    { $set: { status: "done" } }
+  );
+
+  response.json(payment);
 }

@@ -3,13 +3,19 @@ import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { platformApi } from "../../api/platformApi";
 import { DEMO_CANDIDATE_CODE } from "../../config";
-import type { Application, Order, UserHome } from "../../types/platform";
+import type { Application, Order, UserHome, UserProfile } from "../../types/platform";
 import { viText } from "../../utils/vietnameseText";
 
 const AUTH_STORAGE_KEY = "homeswift_user";
 
 type StoredUser = {
+  code?: string;
   name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  savedAddresses?: string[];
+  walletBalance?: number;
   avatar: string;
 };
 
@@ -182,6 +188,9 @@ function getOrderTab(status: string): OrderTab {
 
 function getOrderStatusLabel(status: string) {
   const labels: Record<string, string> = {
+    payment_pending: "Chờ thanh toán",
+    payment_review: "Chờ admin duyệt tiền",
+    finding_worker: "Đang tìm thợ",
     pending: "Chờ thợ đến",
     confirmed: "Đang thực hiện",
     in_service: "Đang thực hiện",
@@ -233,17 +242,28 @@ export default function UserWorkspacePage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [home, setHome] = useState<UserHome | null>(null);
   const [user, setUser] = useState<StoredUser>(() => readStoredUser());
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activeSection, setActiveSection] = useState<ProfileSection>("overview");
   const [activeOrderTab, setActiveOrderTab] = useState<OrderTab>("active");
   const [orderView, setOrderView] = useState<OrderView>("list");
   const [selectedOrderCode, setSelectedOrderCode] = useState<string | null>(null);
+  const [walletAmount, setWalletAmount] = useState("");
+  const [withdrawBankName, setWithdrawBankName] = useState("");
+  const [withdrawBankAccount, setWithdrawBankAccount] = useState("");
+  const [withdrawAccountHolder, setWithdrawAccountHolder] = useState("");
+  const [walletFeedback, setWalletFeedback] = useState("");
   const navigate = useNavigate();
+  const userCode = user.code ?? DEMO_CANDIDATE_CODE;
 
   useEffect(() => {
-    platformApi.getUserApplications(DEMO_CANDIDATE_CODE).then(setApplications);
-    platformApi.getUserOrders(DEMO_CANDIDATE_CODE).then(setOrders);
+    platformApi.getUserApplications(userCode).then(setApplications);
+    platformApi.getUserOrders(userCode).then(setOrders);
     platformApi.getUserHome().then(setHome);
-  }, []);
+    platformApi.getUserProfile(userCode).then((data) => {
+      setProfile(data);
+      setUser((current) => ({ ...current, ...data }));
+    });
+  }, [userCode]);
 
   useEffect(() => {
     const syncUser = () => setUser(readStoredUser());
@@ -267,6 +287,45 @@ export default function UserWorkspacePage() {
   const openTracking = (order: ProfileOrder) => {
     setSelectedOrderCode(order.code);
     setOrderView("tracking");
+  };
+
+  const submitWalletTransaction = async (type: "deposit" | "withdraw") => {
+    const amount = Number(walletAmount);
+    setWalletFeedback("");
+
+    if (!amount || amount < 10000) {
+      setWalletFeedback("Số tiền tối thiểu là 10.000đ.");
+      return;
+    }
+
+    try {
+      const nextProfile = await platformApi.createWalletTransaction({
+        userCode,
+        type,
+        amount,
+        bankName: withdrawBankName,
+        bankAccount: withdrawBankAccount,
+        accountHolder: withdrawAccountHolder
+      });
+      setProfile(nextProfile);
+      setUser((current) => ({ ...current, ...nextProfile }));
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...readStoredUser(), ...nextProfile }));
+      window.dispatchEvent(new Event("homeswift-auth"));
+      setWalletAmount("");
+      setWalletFeedback(type === "deposit" ? "Nạp tiền thành công." : "Đã gửi yêu cầu rút tiền, admin sẽ duyệt sau khi chuyển khoản.");
+    } catch (reason) {
+      setWalletFeedback((reason as Error).message);
+    }
+  };
+
+  const confirmOrderCompleted = async (order: ProfileOrder) => {
+    const orderCode = order.code.replace(/^HS-/, "ORD-");
+    try {
+      await platformApi.completeUserOrder(orderCode);
+      setOrders(await platformApi.getUserOrders(userCode));
+    } catch (reason) {
+      setWalletFeedback((reason as Error).message);
+    }
   };
 
   const renderOverview = () => (
@@ -466,6 +525,11 @@ export default function UserWorkspacePage() {
               <p>Tổng số tiền: <b>{formatCurrency(order.total)}</b></p>
               <div>
                 <button className="button order-outline" type="button" onClick={() => openTracking(order)}>Xem chi tiết</button>
+                {order.tab === "active" ? (
+                  <button className="button order-outline" type="button" onClick={() => confirmOrderCompleted(order)}>
+                    Xác nhận hoàn thành
+                  </button>
+                ) : null}
                 <button className="button primary" type="button">Đặt lại</button>
               </div>
             </div>
@@ -483,8 +547,34 @@ export default function UserWorkspacePage() {
       <div className="wallet-grid">
         <article className="wallet-balance-card">
           <span>Số dư khả dụng</span>
-          <strong>1.250.000đ</strong>
-          <button className="button primary" type="button">Nạp tiền</button>
+          <strong>{formatCurrency(profile?.walletBalance ?? user.walletBalance ?? 0)}</strong>
+          <div className="wallet-actions">
+            <input
+              value={walletAmount}
+              onChange={(event) => setWalletAmount(event.target.value.replace(/\D/g, ""))}
+              placeholder="Nhập số tiền"
+              inputMode="numeric"
+            />
+            <input
+              value={withdrawBankName}
+              onChange={(event) => setWithdrawBankName(event.target.value)}
+              placeholder="Ngân hàng rút"
+            />
+            <input
+              value={withdrawBankAccount}
+              onChange={(event) => setWithdrawBankAccount(event.target.value.replace(/\D/g, ""))}
+              placeholder="Số tài khoản"
+              inputMode="numeric"
+            />
+            <input
+              value={withdrawAccountHolder}
+              onChange={(event) => setWithdrawAccountHolder(event.target.value)}
+              placeholder="Tên chủ tài khoản"
+            />
+            <button className="button primary" type="button" onClick={() => submitWalletTransaction("deposit")}>Nạp tiền</button>
+            <button className="button secondary" type="button" onClick={() => submitWalletTransaction("withdraw")}>Rút tiền</button>
+          </div>
+          {walletFeedback ? <p className="booking-feedback">{walletFeedback}</p> : null}
         </article>
         <article className="coupon-card">
           <span>Ưu đãi đang có</span>
@@ -512,10 +602,17 @@ export default function UserWorkspacePage() {
       </div>
       <div className="profile-form-grid">
         <label>Họ và tên<input value={user.name} readOnly /></label>
-        <label>Số điện thoại<input value="0901 234 567" readOnly /></label>
-        <label>Email<input value="nguyenvana@homeswift.vn" readOnly /></label>
-        <label>Địa chỉ mặc định<input value="12 Lê Lợi, Quận 1, TP. Hồ Chí Minh" readOnly /></label>
+        <label>Số điện thoại<input value={profile?.phone ?? user.phone ?? "Chưa cập nhật"} readOnly /></label>
+        <label>Email<input value={profile?.email ?? user.email ?? "Chưa cập nhật"} readOnly /></label>
+        <label>Địa chỉ mặc định<input value={profile?.address || user.address || "Chưa có địa chỉ mặc định"} readOnly /></label>
       </div>
+      {(profile?.savedAddresses?.length ?? 0) > 0 ? (
+        <div className="profile-info-list">
+          {profile?.savedAddresses.map((address) => (
+            <article key={address}><b>Địa chỉ đã lưu</b><span>{address}</span></article>
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 

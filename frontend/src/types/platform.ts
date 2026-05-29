@@ -120,9 +120,20 @@ export type Order = {
   status: string;
   scheduledAt: string;
   totalAmount: number;
+  frozenBalance?: number;
+  platformFee?: number;
+  workerPayout?: number;
   paymentStatus: string;
   address: string;
   jobTitle?: string;
+};
+
+export type CheckoutInfo = {
+  transferContent: string;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  qrUrl: string;
 };
 
 export type AdminOverview = {
@@ -159,6 +170,15 @@ export type AuthUser = {
   status: string;
   city: string;
   avatar: string;
+  address?: string;
+  savedAddresses?: string[];
+  walletBalance?: number;
+};
+
+export type UserProfile = AuthUser & {
+  address: string;
+  savedAddresses: string[];
+  walletBalance: number;
 };
 
 export type LoginResponse = {
@@ -171,6 +191,8 @@ export type OperationsResponse = {
   alerts: {
     pendingJobs: Array<{ code: string; title: string; type: string }>;
     reviewEmployers: Array<{ code: string; title: string; type: string }>;
+    escrowOrders: Array<{ code: string; title: string; amount: number; transferContent: string; address: string; status: string }>;
+    withdrawals: Array<{ code: string; userCode: string; amount: number; method: string; status: string; createdAt: string }>;
     complaints: Complaint[];
   };
 };
@@ -195,5 +217,13 @@ export type JobDetail = Job & {
   faqs: Array<{
     question: string;
     answer: string;
+  }>;
+  serviceVariants: Array<{
+    code: string;
+    name: string;
+    price?: number;
+    priceMin?: number;
+    priceMax?: number;
+    pricingType: "fixed" | "range";
   }>;
 };

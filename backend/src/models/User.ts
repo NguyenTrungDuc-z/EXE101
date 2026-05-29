@@ -9,6 +9,9 @@ const userSchema = new Schema(
     role: { type: String, enum: ["admin", "employer", "candidate"], required: true },
     status: { type: String, enum: ["active", "pending", "locked"], required: true },
     city: { type: String, required: true },
+    address: { type: String, default: "" },
+    savedAddresses: { type: [String], default: [] },
+    walletBalance: { type: Number, default: 0 },
     avatar: { type: String, required: true },
     createdAt: { type: Date, required: true }
   },

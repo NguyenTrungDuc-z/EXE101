@@ -19,6 +19,19 @@ const jobPostSchema = new Schema(
     },
     summary: { type: String, required: true },
     requirements: { type: [String], default: [] },
+    serviceVariants: {
+      type: [
+        {
+          code: { type: String, required: true },
+          name: { type: String, required: true },
+          price: { type: Number },
+          priceMin: { type: Number },
+          priceMax: { type: Number },
+          pricingType: { type: String, enum: ["fixed", "range"], default: "fixed" }
+        }
+      ],
+      default: []
+    },
     startDate: { type: Date, required: true },
     createdAt: { type: Date, required: true },
     applicantsCount: { type: Number, required: true, default: 0 }
