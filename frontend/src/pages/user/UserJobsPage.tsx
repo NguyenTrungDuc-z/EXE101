@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Search, SlidersHorizontal, DollarSign, Star, Tag, Clock,
+  ChevronLeft, ChevronRight, MapPin, ArrowRight, ShieldCheck,
+  Phone, MessageCircle, ChevronDown, Minus, Plus, CalendarCheck,
+  Users, Sparkles, CheckCircle2, HelpCircle, Quote
+} from "lucide-react";
 import { platformApi } from "../../api/platformApi";
 import type { Job, JobDetail } from "../../types/platform";
 import { viText } from "../../utils/vietnameseText";
@@ -158,7 +164,10 @@ export default function UserJobsPage() {
         <section className="detail-hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(8, 20, 34, 0.62), rgba(8, 20, 34, 0.22)), url(${selectedJob.coverImage})` }}>
           <div>
             <h1>{viText(selectedJob.title)}</h1>
-            <p>{selectedJob.ratingLabel} ★★★★★ <span>|</span> {selectedJob.bookingCountLabel}</p>
+            <p>
+              <Star size={18} fill="#f4c430" stroke="#f4c430" style={{ verticalAlign: "middle", marginRight: 4 }} />
+              {selectedJob.ratingLabel} <span>|</span> {selectedJob.bookingCountLabel}
+            </p>
           </div>
         </section>
 
@@ -186,19 +195,25 @@ export default function UserJobsPage() {
             </section>
 
             <section className="detail-section">
-              <h2>Quy trình thực hiện chuyên nghiệp</h2>
+              <h2>
+                <Sparkles size={22} style={{ verticalAlign: "middle", marginRight: 8, color: "#1977d2" }} />
+                Quy trình thực hiện chuyên nghiệp
+              </h2>
               <div className="process-grid">
                 {selectedJob.processSteps.map((step, index) => (
                   <article key={step}>
                     <span className="process-icon">{index + 1}</span>
-                    <h3>{index + 1}. {step}</h3>
+                    <h3>{step}</h3>
                   </article>
                 ))}
               </div>
             </section>
 
             <section className="detail-section">
-              <h2>Cam kết chất lượng</h2>
+              <h2>
+                <ShieldCheck size={22} style={{ verticalAlign: "middle", marginRight: 8, color: "#1977d2" }} />
+                Cam kết chất lượng
+              </h2>
               <ul className="check-list">
                 {selectedJob.qualityCommitments.map((item) => (
                   <li key={item}>{item}</li>
@@ -228,19 +243,30 @@ export default function UserJobsPage() {
         </section>
 
         <section className="detail-reviews">
-          <h2>Đánh giá khách hàng</h2>
+          <h2>
+            <Quote size={22} style={{ verticalAlign: "middle", marginRight: 8, color: "#1977d2" }} />
+            Đánh giá khách hàng
+          </h2>
           <div className="detail-review-carousel">
-            <button className="carousel-arrow" type="button" aria-label="Trước">‹</button>
+            <button className="carousel-arrow" type="button" aria-label="Trước">
+              <ChevronLeft size={20} />
+            </button>
             {selectedJob.reviews.slice(0, 2).map((review) => (
               <article key={review.author} className="detail-review-card">
                 <img src={review.image} alt={review.author} />
                 <div>
-                  <div className="stars">{"★".repeat(review.rating)}</div>
-                  <p>“{review.comment}”</p>
+                  <div className="stars">
+                    {Array.from({ length: review.rating }).map((_, i) => (
+                      <Star key={i} size={16} fill="#f4c430" stroke="#f4c430" />
+                    ))}
+                  </div>
+                  <p>"{review.comment}"</p>
                 </div>
               </article>
             ))}
-            <button className="carousel-arrow" type="button" aria-label="Sau">›</button>
+            <button className="carousel-arrow" type="button" aria-label="Sau">
+              <ChevronRight size={20} />
+            </button>
           </div>
           <div className="carousel-dots" aria-hidden="true">
             <span className="active" />
@@ -251,10 +277,16 @@ export default function UserJobsPage() {
         </section>
 
         <section className="detail-faq">
-          <h2>Câu hỏi thường gặp (FAQ)</h2>
+          <h2>
+            <HelpCircle size={22} style={{ verticalAlign: "middle", marginRight: 8, color: "#1977d2" }} />
+            Câu hỏi thường gặp (FAQ)
+          </h2>
           {selectedJob.faqs.map((faq) => (
             <details key={faq.question}>
-              <summary>{faq.question}</summary>
+              <summary>
+                {faq.question}
+                <ChevronDown size={18} className="faq-chevron" />
+              </summary>
               <p>{faq.answer}</p>
             </details>
           ))}
@@ -269,7 +301,12 @@ export default function UserJobsPage() {
   return (
     <div className="services-page">
       <section className="services-hero">
-        <h1>Kết quả tìm kiếm đồng bộ</h1>
+        <span className="services-hero-eyebrow">
+          <Search size={14} />
+          Tìm kiếm dịch vụ
+        </span>
+        <h1>Dịch vụ gia đình chuyên nghiệp</h1>
+        <p className="services-hero-sub">Tìm và đặt lịch dịch vụ phù hợp nhanh chóng, tiện lợi</p>
         <form
           className="services-search"
           onSubmit={(event) => {
@@ -277,27 +314,34 @@ export default function UserJobsPage() {
             updateParams({});
           }}
         >
-          <select
-            aria-label="Chọn dịch vụ"
-            value={category}
-            onChange={(event) => {
-              setCategory(event.target.value);
-              setSelectedCategories(event.target.value ? [event.target.value] : []);
-              updateParams({ category: event.target.value });
-            }}
-          >
-            <option value="">Chọn dịch vụ</option>
-            {categories.map((item) => (
-              <option key={item} value={item}>{viText(item)}</option>
-            ))}
-          </select>
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Địa chỉ của bạn"
-          />
+          <div className="services-search-field">
+            <Tag size={18} className="field-icon" />
+            <select
+              aria-label="Chọn dịch vụ"
+              value={category}
+              onChange={(event) => {
+                setCategory(event.target.value);
+                setSelectedCategories(event.target.value ? [event.target.value] : []);
+                updateParams({ category: event.target.value });
+              }}
+            >
+              <option value="">Chọn dịch vụ</option>
+              {categories.map((item) => (
+                <option key={item} value={item}>{viText(item)}</option>
+              ))}
+            </select>
+          </div>
+          <div className="services-search-field">
+            <MapPin size={18} className="field-icon" />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Nhập từ khóa hoặc địa chỉ..."
+            />
+          </div>
           <button className="button primary search-btn" type="submit">
-            Tìm kiếm ngay
+            <Search size={18} />
+            Tìm kiếm
           </button>
         </form>
       </section>
@@ -306,9 +350,16 @@ export default function UserJobsPage() {
 
       <section className="services-results">
         <aside className="services-filter">
-          <h2>Bộ lọc</h2>
+          <h2>
+            <SlidersHorizontal size={20} style={{ marginRight: 8, verticalAlign: "middle" }} />
+            Bộ lọc
+          </h2>
+
           <div className="filter-block">
-            <h3>Khoảng giá</h3>
+            <h3>
+              <DollarSign size={16} style={{ marginRight: 6, verticalAlign: "middle", color: "#1977d2" }} />
+              Khoảng giá
+            </h3>
             <div className="range-line">
               <span />
             </div>
@@ -335,23 +386,48 @@ export default function UserJobsPage() {
           </div>
 
           <div className="filter-block">
-            <h3>Đánh giá</h3>
+            <h3>
+              <Star size={16} style={{ marginRight: 6, verticalAlign: "middle", color: "#f4c430" }} />
+              Đánh giá
+            </h3>
             <label>
               <input type="checkbox" checked={fourStarOnly} onChange={(event) => setFourStarOnly(event.target.checked)} />
-              ★★★★★ (5)
+              <span className="filter-stars">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} size={14} fill="#f4c430" stroke="#f4c430" />
+                ))}
+              </span>
+              <small>(5)</small>
             </label>
             <label>
               <input type="checkbox" />
-              ★★★★☆ (3)
+              <span className="filter-stars">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Star key={i} size={14} fill="#f4c430" stroke="#f4c430" />
+                ))}
+                <Star size={14} fill="none" stroke="#d0d8e2" />
+              </span>
+              <small>(3)</small>
             </label>
             <label>
               <input type="checkbox" />
-              ★★★☆☆ (2)
+              <span className="filter-stars">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Star key={i} size={14} fill="#f4c430" stroke="#f4c430" />
+                ))}
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <Star key={i} size={14} fill="none" stroke="#d0d8e2" />
+                ))}
+              </span>
+              <small>(2)</small>
             </label>
           </div>
 
           <div className="filter-block">
-            <h3>Loại dịch vụ liên quan</h3>
+            <h3>
+              <Tag size={16} style={{ marginRight: 6, verticalAlign: "middle", color: "#1977d2" }} />
+              Loại dịch vụ
+            </h3>
             {categories.map((item) => (
               <label key={item}>
                 <input
@@ -365,29 +441,46 @@ export default function UserJobsPage() {
           </div>
 
           <div className="filter-block">
-            <h3>Thời gian phục vụ</h3>
-            <label><input type="checkbox" defaultChecked /> 8:00 - 12:00</label>
-            <label><input type="checkbox" defaultChecked /> 12:00 - 18:00</label>
-            <label><input type="checkbox" defaultChecked /> Thời gian phục vụ</label>
+            <h3>
+              <Clock size={16} style={{ marginRight: 6, verticalAlign: "middle", color: "#1977d2" }} />
+              Thời gian phục vụ
+            </h3>
+            <label><input type="checkbox" defaultChecked /> 8:00 – 12:00</label>
+            <label><input type="checkbox" defaultChecked /> 12:00 – 18:00</label>
+            <label><input type="checkbox" defaultChecked /> 18:00 – 21:00</label>
           </div>
         </aside>
 
         <div className="services-content">
           <div className="services-result-head">
-            <h1>Dịch vụ liên quan</h1>
-            <p>{displayJobs.length} kết quả cho {resultLabel}</p>
+            <div>
+              <h1>Dịch vụ liên quan</h1>
+              <p>{displayJobs.length} kết quả cho <strong>{resultLabel}</strong></p>
+            </div>
           </div>
           <div className="service-product-grid">
             {primaryJobs.map((job) => <ServiceProductCard key={job.code} job={job} onOpen={openJobDetail} />)}
           </div>
 
-          {!primaryJobs.length ? <p className="feedback">Không có dịch vụ phù hợp với bộ lọc hiện tại.</p> : null}
+          {!primaryJobs.length ? (
+            <div className="empty-state">
+              <Search size={48} strokeWidth={1.2} />
+              <p>Không có dịch vụ phù hợp với bộ lọc hiện tại.</p>
+            </div>
+          ) : null}
 
           <div className="services-section-head">
-            <h2>Dịch vụ gợi ý cho bạn</h2>
+            <h2>
+              <Sparkles size={20} style={{ marginRight: 8, verticalAlign: "middle", color: "#1977d2" }} />
+              Gợi ý cho bạn
+            </h2>
             <div className="services-mini-arrows">
-              <button type="button" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>‹</button>
-              <button type="button" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>›</button>
+              <button type="button" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                <ChevronLeft size={16} />
+              </button>
+              <button type="button" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+                <ChevronRight size={16} />
+              </button>
             </div>
           </div>
 
@@ -395,22 +488,26 @@ export default function UserJobsPage() {
             {recommendedJobs.map((job) => <ServiceProductCard key={job.code} job={job} onOpen={openJobDetail} compact />)}
           </div>
 
-          <div className="services-pagination" aria-label="Phân trang dịch vụ">
-            <button type="button" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>‹</button>
-            {Array.from({ length: totalPages }).map((_, index) => (
-              <button
-                key={index + 1}
-                type="button"
-                className={page === index + 1 ? "active" : ""}
-                onClick={() => setPage(index + 1)}
-              >
-                {index + 1}
+          {totalPages > 1 && (
+            <div className="services-pagination" aria-label="Phân trang dịch vụ">
+              <button type="button" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                <ChevronLeft size={16} />
               </button>
-            ))}
-            <button type="button" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>›</button>
-          </div>
-
-          <SuggestedServices jobs={suggestedJobs.slice(0, 0)} onOpen={openJobDetail} />
+              {Array.from({ length: totalPages }).map((_, index) => (
+                <button
+                  key={index + 1}
+                  type="button"
+                  className={page === index + 1 ? "active" : ""}
+                  onClick={() => setPage(index + 1)}
+                >
+                  {index + 1}
+                </button>
+              ))}
+              <button type="button" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -421,15 +518,32 @@ export default function UserJobsPage() {
 
 function ServiceProductCard({ job, onOpen, compact = false }: { job: Job; onOpen: (jobCode: string) => void; compact?: boolean }) {
   return (
-    <article className={`service-product-card ${compact ? "compact" : ""}`}>
-      <img src={job.coverImage} alt={viText(job.title)} />
+    <article className={`service-product-card ${compact ? "compact" : ""}`} onClick={() => onOpen(job.code)}>
+      <div className="product-image-wrapper">
+        <img src={job.coverImage} alt={viText(job.title)} />
+        <span className="product-category-badge">{viText(job.categoryName)}</span>
+      </div>
       <div className="service-product-body">
         <h3>{viText(job.title)}</h3>
         <div className="product-meta">
-          <span>★★★★★</span>
-          <small>Xem chi tiết</small>
+          <span className="product-rating">
+            <Star size={14} fill="#f4c430" stroke="#f4c430" />
+            {job.ratingLabel ?? "5.0"}
+          </span>
+          <span className="product-bookings">
+            <Users size={13} />
+            {job.bookingCountLabel ?? `${job.applicantsCount}+ đặt`}
+          </span>
         </div>
-        <button className="button primary" type="button" onClick={() => onOpen(job.code)}>Xem chi tiết</button>
+        {job.budgetMin > 0 && (
+          <strong className="product-price">
+            {job.budgetMin.toLocaleString()}đ
+          </strong>
+        )}
+        <button className="button primary product-cta" type="button" onClick={(e) => { e.stopPropagation(); onOpen(job.code); }}>
+          Xem chi tiết
+          <ArrowRight size={15} />
+        </button>
       </div>
     </article>
   );
@@ -452,17 +566,25 @@ function BookingCard({
 }) {
   return (
     <article className="booking-card">
-      <h2>Thẻ đặt lịch</h2>
+      <h2>
+        <CalendarCheck size={22} style={{ verticalAlign: "middle", marginRight: 8, color: "#1977d2" }} />
+        Đặt lịch
+      </h2>
       <div className="booking-quantity">
         <span>Số lượng {unitLabel}</span>
         <div>
-          <button type="button" onClick={onDecrease}>−</button>
+          <button type="button" onClick={onDecrease} aria-label="Giảm">
+            <Minus size={18} />
+          </button>
           <strong>{quantity}</strong>
-          <button type="button" onClick={onIncrease}>+</button>
+          <button type="button" onClick={onIncrease} aria-label="Tăng">
+            <Plus size={18} />
+          </button>
         </div>
       </div>
       <p>Tổng tiền tạm tính: <strong>{total.toLocaleString()} VND</strong></p>
       <button className="button primary" type="button" onClick={onSubmit}>
+        <CalendarCheck size={18} style={{ marginRight: 6 }} />
         Đặt lịch ngay
       </button>
     </article>
@@ -476,7 +598,10 @@ function SuggestedServices({ jobs, onOpen }: { jobs: Job[]; onOpen: (jobCode: st
 
   return (
     <section className="suggested-services">
-      <h2>Dịch vụ gợi ý cho bạn</h2>
+      <h2>
+        <Sparkles size={22} style={{ verticalAlign: "middle", marginRight: 8, color: "#1977d2" }} />
+        Dịch vụ gợi ý cho bạn
+      </h2>
       <div className="suggested-row">
         {jobs.map((job) => (
           <article key={job.code} className="suggested-card" onClick={() => onOpen(job.code)}>
@@ -484,8 +609,14 @@ function SuggestedServices({ jobs, onOpen }: { jobs: Job[]; onOpen: (jobCode: st
             <div>
               <h3>{viText(job.title)}</h3>
               <strong>{job.displayPriceLabel ?? viText(job.salaryLabel)}</strong>
-              <p>⭐ {job.ratingLabel ?? "5"} sao</p>
-              <p>{job.bookingCountLabel ?? `${job.applicantsCount}+ đã đặt`}</p>
+              <p>
+                <Star size={13} fill="#f4c430" stroke="#f4c430" style={{ verticalAlign: "middle", marginRight: 3 }} />
+                {job.ratingLabel ?? "5"} sao
+              </p>
+              <p>
+                <Users size={13} style={{ verticalAlign: "middle", marginRight: 3 }} />
+                {job.bookingCountLabel ?? `${job.applicantsCount}+ đã đặt`}
+              </p>
             </div>
           </article>
         ))}
@@ -499,15 +630,18 @@ function HomeFooter() {
     <footer className="home-footer services-footer">
       <div>
         <h3>Liên hệ</h3>
-        <p>0833 256 780</p>
+        <p>
+          <Phone size={14} style={{ verticalAlign: "middle", marginRight: 6 }} />
+          0833 256 780
+        </p>
         <p>homeswift.com</p>
       </div>
       <div>
         <h3>Mạng xã hội</h3>
         <div className="social-row">
-          <span>f</span>
-          <span>ig</span>
-          <span>yt</span>
+          <a href="#" aria-label="Facebook">f</a>
+          <a href="#" aria-label="Instagram">ig</a>
+          <a href="#" aria-label="YouTube">yt</a>
         </div>
       </div>
       <div>

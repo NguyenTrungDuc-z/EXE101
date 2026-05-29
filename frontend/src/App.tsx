@@ -16,6 +16,7 @@ import PartnerPage from "./pages/user/PartnerPage";
 import UserHomePage from "./pages/user/UserHomePage";
 import UserJobsPage from "./pages/user/UserJobsPage";
 import UserWorkspacePage from "./pages/user/UserWorkspacePage";
+import FloatingChatWidget from "./components/FloatingChatWidget";
 
 const AUTH_STORAGE_KEY = "homeswift_user";
 
@@ -33,29 +34,32 @@ function RequireUser({ children }: { children: ReactNode }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route element={<UserLayout />}>
-        <Route path="/" element={<UserHomePage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/user/jobs" element={<UserJobsPage />} />
-        <Route path="/user/workspace" element={<UserWorkspacePage />} />
-        <Route path="/booking" element={<RequireUser><EmployerPostJobPage /></RequireUser>} />
-        <Route path="/partner" element={<PartnerPage />} />
-        <Route path="/user/post-job" element={<Navigate to="/partner" replace />} />
-        <Route path="/help" element={<HelpPage />} />
-        <Route path="/login" element={<LoginPage />} />
-      </Route>
+    <>
+      <Routes>
+        <Route element={<UserLayout />}>
+          <Route path="/" element={<UserHomePage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/user/jobs" element={<UserJobsPage />} />
+          <Route path="/user/workspace" element={<UserWorkspacePage />} />
+          <Route path="/booking" element={<RequireUser><EmployerPostJobPage /></RequireUser>} />
+          <Route path="/partner" element={<PartnerPage />} />
+          <Route path="/user/post-job" element={<Navigate to="/partner" replace />} />
+          <Route path="/help" element={<HelpPage />} />
+          <Route path="/login" element={<LoginPage />} />
+        </Route>
 
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<AdminDashboardPage />} />
-        <Route path="jobs" element={<AdminJobsPage />} />
-        <Route path="employers" element={<AdminEmployersPage />} />
-        <Route path="candidates" element={<AdminCandidatesPage />} />
-        <Route path="operations" element={<AdminOperationsPage />} />
-      </Route>
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="jobs" element={<AdminJobsPage />} />
+          <Route path="employers" element={<AdminEmployersPage />} />
+          <Route path="candidates" element={<AdminCandidatesPage />} />
+          <Route path="operations" element={<AdminOperationsPage />} />
+        </Route>
 
-      <Route path="/home" element={<Navigate to="/" replace />} />
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+        <Route path="/home" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+      <FloatingChatWidget />
+    </>
   );
 }

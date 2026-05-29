@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { ServiceIcons } from "../assets/service-icons";
 
 const AUTH_STORAGE_KEY = "homeswift_user";
 
@@ -49,7 +50,7 @@ export default function UserLayout() {
     <div className="app-frame shell-user">
       <header className="topbar">
         <NavLink to="/" end className="brand-mark">
-          <span className="brand-icon" aria-hidden="true" />
+          <ServiceIcons.home size={28} className="brand-icon-svg" />
           <strong>Home<span>Swift</span></strong>
         </NavLink>
         <nav className="nav-stack">

@@ -16,7 +16,6 @@ const serviceCatalog = {
     ],
     ratingLabel: "4.9",
     bookingCountLabel: "1,250+ đã đặt",
-    displayPriceLabel: "250.000 VND",
     unitLabel: "máy",
     benefits: ["Tiết kiệm điện", "Không khí trong lành", "Tăng tuổi thọ"],
     processSteps: ["Kiểm tra", "Vệ sinh dàn lạnh", "Vệ sinh dàn nóng", "Kiểm tra gas", "Lắp đặt lại", "Nghiệm thu"],
@@ -44,7 +43,6 @@ const serviceCatalog = {
   },
   "CAT-CLEAN": {
     coverImage: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1200&q=80",
-    displayPriceLabel: "220.000 VND",
     unitLabel: "ca",
     benefits: ["Nhà sạch nhanh", "Tiết kiệm thời gian", "Dụng cụ đầy đủ"],
     processSteps: ["Khảo sát khu vực", "Dọn rác", "Lau bề mặt", "Vệ sinh sàn", "Kiểm tra lại", "Bàn giao"],
@@ -52,13 +50,24 @@ const serviceCatalog = {
   },
   "CAT-PLUMB": {
     coverImage: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=1200&q=80",
-    displayPriceLabel: "350.000 VND",
     unitLabel: "lần",
     benefits: ["Xử lý nhanh", "Hạn chế rò rỉ", "Báo giá trước"],
     processSteps: ["Kiểm tra lỗi", "Khóa nguồn nước", "Sửa chữa", "Chạy thử", "Vệ sinh khu vực", "Bàn giao"],
     reasons: ["Xử lý nhanh", "Hạn chế rò rỉ", "Báo giá trước", "Bảo hành sau sửa"]
   }
 } as const;
+
+function formatPriceLabelFromSalary(salaryLabel?: string) {
+  if (!salaryLabel) {
+    return undefined;
+  }
+
+  return salaryLabel
+    .replace(/\s*\/\s*task\b/gi, " VND")
+    .replace(/\s*\/\s*ca\b/gi, " VND")
+    .replace(/\s*\/\s*lan\b/gi, " VND")
+    .trim();
+}
 
 function getServiceMeta(categoryCode: string, salaryLabel?: string) {
   const defaults = serviceCatalog.default;
@@ -70,7 +79,7 @@ function getServiceMeta(categoryCode: string, salaryLabel?: string) {
     qualityCommitments: "qualityCommitments" in categoryMeta ? categoryMeta.qualityCommitments : defaults.qualityCommitments,
     reviews: "reviews" in categoryMeta ? categoryMeta.reviews : defaults.reviews,
     faqs: "faqs" in categoryMeta ? categoryMeta.faqs : defaults.faqs,
-    displayPriceLabel: salaryLabel ? salaryLabel.replace(" / task", " VND").replace(" / ca", " VND").replace(" / lan", " VND") : ("displayPriceLabel" in categoryMeta ? categoryMeta.displayPriceLabel : defaults.displayPriceLabel)
+    displayPriceLabel: formatPriceLabelFromSalary(salaryLabel)
   };
 }
 

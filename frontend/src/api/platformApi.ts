@@ -38,5 +38,10 @@ export const platformApi = {
     apiFetch<Application>("/user/applications", {
       method: "POST",
       body: JSON.stringify(payload)
+    }),
+  chatWithGemini: (payload: { message: string }) =>
+    apiFetch<{ reply: string }>("/chat", {
+      method: "POST",
+      body: JSON.stringify(payload)
     })
 };
