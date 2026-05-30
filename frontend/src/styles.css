@@ -2841,14 +2841,23 @@ textarea {
   border-bottom: 1px solid #dce4ec;
 }
 
+.profile-top img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e0e7f1;
+}
+
 .profile-content {
   padding: 32px 36px 40px;
 }
 
 .profile-content h1 {
-  margin: 0 0 24px;
-  color: #000000;
-  font-size: clamp(30px, 3vw, 42px);
+  margin: 0 0 28px;
+  color: #111827;
+  font-size: 32px;
+  font-weight: 800;
 }
 
 .current-order-card {
@@ -2946,9 +2955,10 @@ textarea {
 }
 
 .profile-section h2 {
-  margin: 0 0 14px;
-  color: #000000;
-  font-size: 28px;
+  margin: 0 0 18px;
+  color: #111827;
+  font-size: 22px;
+  font-weight: 700;
 }
 
 .history-list {

@@ -93,7 +93,7 @@ export async function loginWithPhone(request: Request, response: Response) {
 
   if (!user) {
     const code = generateCode("USR-CAN");
-    user = await UserModel.create({
+    const newUser = await UserModel.create({
       code,
       name: `Khách hàng ${phone.slice(-4)}`,
       email: `${code.toLowerCase()}@homeswift.local`,
@@ -104,6 +104,9 @@ export async function loginWithPhone(request: Request, response: Response) {
       avatar: `https://i.pravatar.cc/120?u=${code}`,
       createdAt: new Date()
     });
+    user = newUser.toObject() as any;
+  } else {
+    user = user.toObject() as any;
   }
 
   if (!user) {
@@ -180,51 +183,178 @@ export async function registerWithPhone(request: Request, response: Response) {
 }
 
 export async function verifyRegisterOtp(request: Request, response: Response) {
-  const phone = normalizePhone(String(request.body.phone ?? ""));
-  const otp = String(request.body.otp ?? "").trim();
-  const pending = pendingRegistrations.get(phone);
+   const phone = normalizePhone(String(request.body.phone ?? ""));
+   const otp = String(request.body.otp ?? "").trim();
+   const pending = pendingRegistrations.get(phone);
 
-  if (!isValidVietnamPhone(phone)) {
-    response.status(400).json({ message: "Số điện thoại không hợp lệ." });
+   if (!isValidVietnamPhone(phone)) {
+     response.status(400).json({ message: "Số điện thoại không hợp lệ." });
+     return;
+   }
+
+   if (!pending) {
+     response.status(404).json({ message: "Không tìm thấy yêu cầu đăng ký. Vui lòng gửi lại OTP." });
+     return;
+   }
+
+   if (pending.expiresAt < Date.now()) {
+     pendingRegistrations.delete(phone);
+     response.status(410).json({ message: "Mã OTP đã hết hạn. Vui lòng gửi lại." });
+     return;
+   }
+
+   if (pending.otp !== otp) {
+     response.status(400).json({ message: "Mã OTP không đúng." });
+     return;
+   }
+
+   const existingByPhone = await UserModel.findOne({ phone }).lean();
+   if (existingByPhone) {
+     pendingRegistrations.delete(phone);
+     response.status(409).json({ message: "Số điện thoại đã được đăng ký." });
+     return;
+   }
+
+   const code = generateCode("USR-CAN");
+   const newUser = await UserModel.create({
+     code,
+     name: pending.name,
+     email: pending.email,
+     phone,
+     role: "candidate",
+     status: "active",
+     city: pending.city,
+     avatar: `https://i.pravatar.cc/120?u=${code}`,
+     createdAt: new Date()
+   });
+
+   pendingRegistrations.delete(phone);
+   response.status(201).json(toAuthPayload(newUser.toObject() as any));
+}
+
+export async function loginWithGoogle(request: Request, response: Response) {
+  const { credential } = request.body;
+
+  if (!credential) {
+    response.status(400).json({ message: "Vui lòng cung cấp Google credential." });
     return;
   }
 
-  if (!pending) {
-    response.status(404).json({ message: "Không tìm thấy yêu cầu đăng ký. Vui lòng gửi lại OTP." });
+  try {
+    // Decode JWT credential to get user info
+    const parts = credential.split('.');
+    if (parts.length !== 3) {
+      response.status(400).json({ message: "Credential không hợp lệ." });
+      return;
+    }
+
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = JSON.parse(Buffer.from(base64, 'base64').toString('utf-8'));
+
+    const { email, name, sub: googleId } = jsonPayload;
+
+    if (!email) {
+      response.status(400).json({ message: "Không thể lấy email từ Google." });
+      return;
+    }
+
+    if (!googleId) {
+      response.status(400).json({ message: "Không thể lấy Google ID." });
+      return;
+    }
+
+    try {
+      let user = await UserModel.findOne({ email }).lean();
+
+      if (!user) {
+        const code = generateCode("USR-CAN");
+        const googleIdStr = String(googleId);
+        try {
+          const newUser = await UserModel.create({
+            code,
+            name: name || `Google User ${googleIdStr.slice(-4)}`,
+            email,
+            phone: `google-${googleIdStr}`,
+            role: "candidate",
+            status: "active",
+            city: "Ho Chi Minh City",
+            avatar: `https://i.pravatar.cc/120?u=${code}`,
+            createdAt: new Date()
+          });
+          user = newUser.toObject() as any;
+        } catch (createError: any) {
+          console.error("Error creating Google user:", createError.message);
+          if (createError.code === 11000) {
+            response.status(409).json({ message: "Email hoặc mã người dùng đã tồn tại." });
+            return;
+          }
+          throw createError;
+        }
+      }
+
+      if (user && user.status === "locked") {
+        response.status(403).json({ message: "Tài khoản đang bị khóa." });
+        return;
+      }
+
+      if (!user) {
+        response.status(500).json({ message: "Lỗi tạo tài khoản." });
+        return;
+      }
+
+      response.json(toAuthPayload(user));
+    } catch (dbError: any) {
+      console.error("Database error in Google login:", dbError.message);
+      response.status(500).json({ message: "Lỗi cơ sở dữ liệu." });
+    }
+  } catch (error: any) {
+    console.error("Google login error:", error.message);
+    response.status(500).json({ message: "Lỗi xác thực Google." });
+  }
+}
+
+export async function loginWithFacebook(request: Request, response: Response) {
+  const { accessToken, userID, name, email } = request.body;
+
+  if (!accessToken || !userID) {
+    response.status(400).json({ message: "Vui lòng cung cấp Facebook credentials." });
     return;
   }
 
-  if (pending.expiresAt < Date.now()) {
-    pendingRegistrations.delete(phone);
-    response.status(410).json({ message: "Mã OTP đã hết hạn. Vui lòng gửi lại." });
-    return;
+  try {
+    const fbEmail = email || `facebook-${userID}@homeswift.local`;
+    let user = await UserModel.findOne({ email: fbEmail }).lean();
+
+    if (!user) {
+      const code = generateCode("USR-CAN");
+      const newUser = await UserModel.create({
+        code,
+        name: name || `Facebook User ${userID.slice(-4)}`,
+        email: fbEmail,
+        phone: `facebook-${userID}`,
+        role: "candidate",
+        status: "active",
+        city: "Ho Chi Minh City",
+        avatar: `https://i.pravatar.cc/120?u=${code}`,
+        createdAt: new Date()
+      });
+      user = newUser.toObject() as any;
+    }
+
+    if (user && user.status === "locked") {
+      response.status(403).json({ message: "Tài khoản đang bị khóa." });
+      return;
+    }
+
+    if (!user) {
+      response.status(500).json({ message: "Lỗi tạo tài khoản." });
+      return;
+    }
+
+    response.json(toAuthPayload(user));
+  } catch (error) {
+    console.error("Facebook login error:", error);
+    response.status(500).json({ message: "Lỗi xác thực Facebook." });
   }
-
-  if (pending.otp !== otp) {
-    response.status(400).json({ message: "Mã OTP không đúng." });
-    return;
-  }
-
-  const existingByPhone = await UserModel.findOne({ phone }).lean();
-  if (existingByPhone) {
-    pendingRegistrations.delete(phone);
-    response.status(409).json({ message: "Số điện thoại đã được đăng ký." });
-    return;
-  }
-
-  const code = generateCode("USR-CAN");
-  const user = await UserModel.create({
-    code,
-    name: pending.name,
-    email: pending.email,
-    phone,
-    role: "candidate",
-    status: "active",
-    city: pending.city,
-    avatar: `https://i.pravatar.cc/120?u=${code}`,
-    createdAt: new Date()
-  });
-
-  pendingRegistrations.delete(phone);
-  response.status(201).json(toAuthPayload(user));
 }

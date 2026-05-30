@@ -10,7 +10,11 @@ import { OrderModel } from "../../models/Order.js";
 import { PaymentModel } from "../../models/Payment.js";
 import { UserModel } from "../../models/User.js";
 
-export async function getOverview(_request: Request, response: Response) {
+export async function getOverview(request: any, response: Response) {
+  if (request.user.role !== "admin") {
+    return response.status(403).json({ message: "Chỉ admin mới có quyền truy cập" });
+  }
+
   const [
     totalUsers,
     totalEmployers,
@@ -56,7 +60,11 @@ export async function getOverview(_request: Request, response: Response) {
   });
 }
 
-export async function listAdminJobs(_request: Request, response: Response) {
+export async function listAdminJobs(request: any, response: Response) {
+  if (request.user.role !== "admin") {
+    return response.status(403).json({ message: "Chỉ admin mới có quyền truy cập" });
+  }
+
   const [jobs, employers, categories, applications] = await Promise.all([
     JobPostModel.find().sort({ createdAt: -1 }).lean(),
     EmployerProfileModel.find().lean(),
@@ -82,7 +90,11 @@ export async function listAdminJobs(_request: Request, response: Response) {
   );
 }
 
-export async function listAdminEmployers(_request: Request, response: Response) {
+export async function listAdminEmployers(request: any, response: Response) {
+  if (request.user.role !== "admin") {
+    return response.status(403).json({ message: "Chỉ admin mới có quyền truy cập" });
+  }
+
   const [users, profiles, jobs] = await Promise.all([
     UserModel.find({ role: "employer" }).lean(),
     EmployerProfileModel.find().lean(),
@@ -109,7 +121,11 @@ export async function listAdminEmployers(_request: Request, response: Response) 
   );
 }
 
-export async function listAdminCandidates(_request: Request, response: Response) {
+export async function listAdminCandidates(request: any, response: Response) {
+  if (request.user.role !== "admin") {
+    return response.status(403).json({ message: "Chỉ admin mới có quyền truy cập" });
+  }
+
   const [users, profiles, applications, orders] = await Promise.all([
     UserModel.find({ role: "candidate" }).lean(),
     CandidateProfileModel.find().lean(),
@@ -144,7 +160,11 @@ export async function listAdminCandidates(_request: Request, response: Response)
   );
 }
 
-export async function listAdminOperations(_request: Request, response: Response) {
+export async function listAdminOperations(request: any, response: Response) {
+  if (request.user.role !== "admin") {
+    return response.status(403).json({ message: "Chỉ admin mới có quyền truy cập" });
+  }
+
   const [tasks, complaints, pendingJobs, reviewEmployers, escrowOrders, withdrawalPayments] = await Promise.all([
     OperationTaskModel.find().sort({ createdAt: -1 }).lean(),
     ComplaintModel.find().sort({ createdAt: -1 }).lean(),
@@ -188,7 +208,11 @@ export async function listAdminOperations(_request: Request, response: Response)
   });
 }
 
-export async function approveEscrowPayment(request: Request, response: Response) {
+export async function approveEscrowPayment(request: any, response: Response) {
+  if (request.user.role !== "admin") {
+    return response.status(403).json({ message: "Chỉ admin mới có quyền truy cập" });
+  }
+
   const { orderCode } = request.params;
   const order = await OrderModel.findOne({ code: orderCode });
 
@@ -220,7 +244,11 @@ export async function approveEscrowPayment(request: Request, response: Response)
   response.json(order);
 }
 
-export async function approveWithdrawal(request: Request, response: Response) {
+export async function approveWithdrawal(request: any, response: Response) {
+  if (request.user.role !== "admin") {
+    return response.status(403).json({ message: "Chỉ admin mới có quyền truy cập" });
+  }
+
   const { paymentCode } = request.params;
   const payment = await PaymentModel.findOne({ code: paymentCode, type: "wallet_withdraw" });
 
@@ -252,4 +280,80 @@ export async function approveWithdrawal(request: Request, response: Response) {
   );
 
   response.json(payment);
+}
+
+export async function listAdminUsers(request: any, response: Response) {
+  if (request.user.role !== "admin") {
+    return response.status(403).json({ message: "Chỉ admin mới có quyền truy cập" });
+  }
+
+  const users = await UserModel.find().sort({ createdAt: -1 }).lean();
+  response.json(users);
+}
+
+export async function updateUserRole(request: any, response: Response) {
+  if (request.user.role !== "admin") {
+    return response.status(403).json({ message: "Chỉ admin mới có quyền truy cập" });
+  }
+
+  const { userCode } = request.params;
+  const { role } = request.body;
+
+  if (!["admin", "employer", "candidate"].includes(role)) {
+    response.status(400).json({ message: "Vai trò không hợp lệ." });
+    return;
+  }
+
+  const user = await UserModel.findOneAndUpdate(
+    { code: userCode },
+    { $set: { role } },
+    { new: true }
+  );
+
+  if (!user) {
+    response.status(404).json({ message: "Không tìm thấy người dùng." });
+    return;
+  }
+
+  response.json(user);
+}
+
+export async function approveJob(request: Request, response: Response) {
+  const { jobCode } = request.params;
+
+  const job = await JobPostModel.findOne({ code: jobCode });
+  if (!job) {
+    response.status(404).json({ message: "Không tìm thấy yêu cầu." });
+    return;
+  }
+
+  if (job.status !== "pending") {
+    response.status(400).json({ message: "Yêu cầu đã được xử lý trước đó." });
+    return;
+  }
+
+  job.status = "approved";
+  await job.save();
+
+  response.json(job);
+}
+
+export async function rejectJob(request: Request, response: Response) {
+  const { jobCode } = request.params;
+
+  const job = await JobPostModel.findOne({ code: jobCode });
+  if (!job) {
+    response.status(404).json({ message: "Không tìm thấy yêu cầu." });
+    return;
+  }
+
+  if (job.status !== "pending") {
+    response.status(400).json({ message: "Yêu cầu đã được xử lý trước đó." });
+    return;
+  }
+
+  job.status = "rejected";
+  await job.save();
+
+  response.json(job);
 }

@@ -7,6 +7,7 @@ import { OperationTaskModel } from "../../models/OperationTask.js";
 import { OrderModel } from "../../models/Order.js";
 import { PaymentModel } from "../../models/Payment.js";
 import { UserModel } from "../../models/User.js";
+import { WalletTransactionModel } from "../../models/WalletTransaction.js";
 import { generateCode } from "../../utils/generateCode.js";
 
 const serviceCatalog = {
@@ -348,8 +349,8 @@ export async function getUserJobDetail(request: Request, response: Response) {
   });
 }
 
-export async function listUserApplications(request: Request, response: Response) {
-  const candidateCode = String(request.query.candidateCode ?? "USR-CAN-001");
+export async function listUserApplications(request: any, response: Response) {
+  const candidateCode = request.user.code;
   const [applications, jobs] = await Promise.all([
     ApplicationModel.find({ candidateCode }).sort({ appliedAt: -1 }).lean(),
     JobPostModel.find().lean()
@@ -367,29 +368,40 @@ export async function listUserApplications(request: Request, response: Response)
   );
 }
 
-export async function listUserOrders(request: Request, response: Response) {
-  const userCode = String(request.query.userCode ?? "USR-CAN-001");
-  const [orders, jobs] = await Promise.all([
+export async function listUserOrders(request: any, response: Response) {
+  const userCode = request.user.code;
+  const [orders, jobs, users] = await Promise.all([
     OrderModel.find({
       $or: [{ employerCode: userCode }, { candidateCode: userCode }]
     })
       .sort({ scheduledAt: -1 })
       .lean(),
-    JobPostModel.find().lean()
+    JobPostModel.find().lean(),
+    UserModel.find().lean()
   ]);
 
   const jobMap = new Map(jobs.map((item) => [item.code, item]));
+  const userMap = new Map(users.map((item) => [item.code, item]));
 
   response.json(
-    orders.map((order) => ({
-      ...order,
-      jobTitle: jobMap.get(order.jobCode)?.title ?? order.jobCode
-    }))
+    orders.map((order) => {
+      const employer = userMap.get(order.employerCode);
+      const candidate = userMap.get(order.candidateCode);
+      
+      return {
+        ...order,
+        jobTitle: jobMap.get(order.jobCode)?.title ?? order.jobCode,
+        employerName: employer?.name ?? order.employerCode,
+        employerAvatar: employer?.avatar ?? "",
+        candidateName: candidate?.name ?? "Chưa có thợ nhận",
+        candidateAvatar: candidate?.avatar ?? "https://i.pravatar.cc/150?u=unassigned"
+      };
+    })
   );
 }
 
-export async function getUserProfile(request: Request, response: Response) {
-  const userCode = String(request.query.userCode ?? "USR-CAN-001");
+export async function getUserProfile(request: any, response: Response) {
+  const userCode = request.user.code;
   const user = await UserModel.findOne({ code: userCode }).lean();
 
   if (!user) {
@@ -400,15 +412,10 @@ export async function getUserProfile(request: Request, response: Response) {
   response.json(toUserProfile(user));
 }
 
-export async function updateUserProfile(request: Request, response: Response) {
-  const userCode = String(request.body.userCode ?? request.query.userCode ?? "");
+export async function updateUserProfile(request: any, response: Response) {
+  const userCode = request.user.code;
   const address = String(request.body.address ?? "").trim();
   const savedAddresses = Array.isArray(request.body.savedAddresses) ? request.body.savedAddresses : [];
-
-  if (!userCode) {
-    response.status(400).json({ message: "Thiếu mã người dùng." });
-    return;
-  }
 
   const user = await UserModel.findOne({ code: userCode });
   if (!user) {
@@ -425,9 +432,9 @@ export async function updateUserProfile(request: Request, response: Response) {
   response.json(toUserProfile(user.toObject()));
 }
 
-export async function createUserOrder(request: Request, response: Response) {
+export async function createUserOrder(request: any, response: Response) {
+  const userCode = request.user.code;
   const {
-    userCode,
     jobCode,
     scheduledAt,
     totalAmount,
@@ -475,6 +482,12 @@ export async function createUserOrder(request: Request, response: Response) {
     response.status(404).json({ message: "Không tìm thấy dịch vụ." });
     return;
   }
+
+  // Chặn Thợ tự đặt dịch vụ của chính mình
+  // if (user.code === job.employerCode) {
+  //   response.status(400).json({ message: "Bạn không thể tự đặt dịch vụ của chính mình." });
+  //   return;
+  // }
 
   if (paymentMethod === "wallet" && (user.walletBalance ?? 0) < amount) {
     response.status(400).json({ message: "Số dư ví không đủ để thanh toán." });
@@ -625,13 +638,29 @@ export async function completeUserOrder(request: Request, response: Response) {
   }
 
   const frozenAmount = order.frozenBalance || order.totalAmount;
-  const workerPayout = Math.round(frozenAmount * 0.8);
-  const platformFee = frozenAmount - workerPayout;
+  
+  // Random commission rate between 20% and 30%
+  const commissionRate = Math.floor(Math.random() * (30 - 20 + 1) + 20) / 100; // e.g. 0.20 to 0.30
+  
+  const platformFee = Math.round(frozenAmount * commissionRate);
+  const workerPayout = frozenAmount - platformFee;
   const worker = await UserModel.findOne({ code: order.candidateCode });
 
   if (worker) {
     worker.walletBalance = (worker.walletBalance ?? 0) + workerPayout;
     await worker.save();
+    
+    // Create wallet transaction for worker earning
+    await WalletTransactionModel.create({
+      code: generateCode("WTR"),
+      userCode: worker.code,
+      type: "earning",
+      amount: workerPayout,
+      description: `Nhận tiền từ đơn hàng ${order.code} (đã trừ ${commissionRate * 100}% chiết khấu)`,
+      relatedOrderCode: order.code,
+      balanceAfter: worker.walletBalance,
+      createdAt: new Date()
+    });
   }
 
   order.status = "completed";
@@ -639,6 +668,9 @@ export async function completeUserOrder(request: Request, response: Response) {
   order.frozenBalance = 0;
   order.workerPayout = workerPayout;
   order.platformFee = platformFee;
+  order.commissionRate = commissionRate;
+  order.commissionAmount = platformFee;
+  order.earningAmount = workerPayout;
   await order.save();
 
   await PaymentModel.create({
@@ -668,8 +700,8 @@ export async function completeUserOrder(request: Request, response: Response) {
   response.json(order);
 }
 
-export async function createWalletTransaction(request: Request, response: Response) {
-  const userCode = String(request.body.userCode ?? "");
+export async function createWalletTransaction(request: any, response: Response) {
+  const userCode = request.user.code;
   const type = String(request.body.type ?? "");
   const amount = Number(request.body.amount ?? 0);
   const bankName = String(request.body.bankName ?? "").trim();
@@ -710,6 +742,29 @@ export async function createWalletTransaction(request: Request, response: Respon
   if (type === "deposit") {
     user.walletBalance = (user.walletBalance ?? 0) + amount;
     await user.save();
+    
+    await WalletTransactionModel.create({
+      code: generateCode("WTR"),
+      userCode: user.code,
+      type: "deposit",
+      amount,
+      description: "Nạp tiền vào ví",
+      balanceAfter: user.walletBalance,
+      createdAt: new Date()
+    });
+  } else if (type === "withdraw") {
+    user.walletBalance = (user.walletBalance ?? 0) - amount;
+    await user.save();
+    
+    await WalletTransactionModel.create({
+      code: generateCode("WTR"),
+      userCode: user.code,
+      type: "withdraw",
+      amount,
+      description: `Rút tiền về ${bankName} - ${bankAccount}`,
+      balanceAfter: user.walletBalance,
+      createdAt: new Date()
+    });
   }
 
   const payment = await PaymentModel.create({
@@ -745,9 +800,9 @@ export async function createWalletTransaction(request: Request, response: Respon
   });
 }
 
-export async function createUserJob(request: Request, response: Response) {
+export async function createUserJob(request: any, response: Response) {
+  const employerCode = request.user.code;
   const {
-    employerCode,
     title,
     categoryCode,
     location,
@@ -785,8 +840,9 @@ export async function createUserJob(request: Request, response: Response) {
   response.status(201).json(job);
 }
 
-export async function createUserApplication(request: Request, response: Response) {
-  const { candidateCode, jobCode, note } = request.body;
+export async function createUserApplication(request: any, response: Response) {
+  const candidateCode = request.user.code;
+  const { jobCode, note } = request.body;
 
   const existing = await ApplicationModel.findOne({ candidateCode, jobCode }).lean();
   if (existing) {

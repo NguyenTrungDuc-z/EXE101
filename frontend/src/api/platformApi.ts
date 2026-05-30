@@ -1,5 +1,7 @@
 import type {
   AdminOverview,
+  WalletTransaction,
+  MaterialList,
   Application,
   Candidate,
   CheckoutInfo,
@@ -30,11 +32,27 @@ export const platformApi = {
       method: "POST",
       body: JSON.stringify(payload)
     }),
+  loginWithGoogle: (payload: { credential: string }) =>
+    apiFetch<LoginResponse>("/auth/google", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  loginWithFacebook: (payload: { accessToken: string; userID: string; name?: string; email?: string }) =>
+    apiFetch<LoginResponse>("/auth/facebook", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
   getAdminOverview: () => apiFetch<AdminOverview>("/admin/overview"),
   getAdminJobs: () => apiFetch<Job[]>("/admin/jobs"),
   getAdminEmployers: () => apiFetch<Employer[]>("/admin/employers"),
   getAdminCandidates: () => apiFetch<Candidate[]>("/admin/candidates"),
   getAdminOperations: () => apiFetch<OperationsResponse>("/admin/operations"),
+  getAdminUsers: () => apiFetch<any[]>("/admin/users"),
+  updateUserRole: (userCode: string, role: string) => 
+    apiFetch<any>(`/admin/users/${userCode}/role`, {
+      method: "PATCH",
+      body: JSON.stringify({ role })
+    }),
   getUserHome: () => apiFetch<UserHome>("/user/home"),
   getUserJobs: (query = "") => apiFetch<Job[]>(`/user/jobs${query}`),
   getUserJobDetail: (jobCode: string) => apiFetch<JobDetail>(`/user/jobs/${jobCode}`),
@@ -81,6 +99,25 @@ export const platformApi = {
       method: "POST",
       body: JSON.stringify(payload)
     }),
+  getWalletHistory: (userCode: string) => 
+    apiFetch<WalletTransaction[]>(`/user/wallet/history?userCode=${userCode}`),
+  createReview: (payload: { orderCode: string; rating: number; comment: string; employerCode: string }) =>
+    apiFetch<any>("/user/reviews", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  createMaterialList: (payload: { orderCode: string; candidateCode: string; items: any[]; note: string }) =>
+    apiFetch<MaterialList>("/user/material-lists", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  getMaterialList: (orderCode: string) =>
+    apiFetch<MaterialList[]>(`/user/material-lists/${orderCode}`),
+  confirmMaterialList: (payload: { orderCode: string; employerCode: string; status: "confirmed" | "rejected" }) =>
+    apiFetch<MaterialList>("/user/material-lists/confirm", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
   approveEscrowPayment: (orderCode: string) =>
     apiFetch<Order>(`/admin/orders/${orderCode}/approve-escrow`, {
       method: "POST"
@@ -103,5 +140,35 @@ export const platformApi = {
     apiFetch<{ reply: string }>("/chat", {
       method: "POST",
       body: JSON.stringify(payload)
+    }),
+  getPendingOrders: () => apiFetch<Order[]>("/user/orders/pending"),
+  getOrderDetail: (orderCode: string) => apiFetch<Order>(`/user/orders/detail/${orderCode}`),
+  acceptOrder: (payload: { orderId: string; candidateCode: string }) =>
+    apiFetch<any>("/user/orders/accept", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  createInvoice: (payload: { orderId: string; invoiceItems: any[]; materialTotal: number }) =>
+    apiFetch<any>("/user/orders/invoice", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  approveInvoice: (payload: { orderId: string }) =>
+    apiFetch<any>("/user/orders/approve-invoice", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  completeAndPayOrder: (payload: { orderId: string }) =>
+    apiFetch<any>("/user/orders/complete-and-pay", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  approveJob: (jobCode: string) =>
+    apiFetch<Job>(`/admin/jobs/${jobCode}/approve`, {
+      method: "POST"
+    }),
+  rejectJob: (jobCode: string) =>
+    apiFetch<Job>(`/admin/jobs/${jobCode}/reject`, {
+      method: "POST"
     })
 };

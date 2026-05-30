@@ -7,11 +7,13 @@ import {
   Users, Sparkles, CheckCircle2, HelpCircle, Quote
 } from "lucide-react";
 import { platformApi } from "../../api/platformApi";
-import type { Job, JobDetail } from "../../types/platform";
+import type { Job, JobDetail, Order, UserProfile } from "../../types/platform";
 import { viText } from "../../utils/vietnameseText";
 
 export default function UserJobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedJob, setSelectedJob] = useState<JobDetail | null>(null);
   const [search, setSearch] = useState("");
@@ -45,7 +47,20 @@ export default function UserJobsPage() {
       .getUserHome()
       .then((home) => setCategories(home.categories.map((item) => item.name)))
       .catch((reason: Error) => setFeedback(reason.message));
+
+    const userCode = localStorage.getItem("userCode");
+    if (userCode) {
+      platformApi.getUserProfile(userCode).then(setUserProfile).catch(console.error);
+    }
   }, []);
+
+  useEffect(() => {
+    if (userProfile?.role === "candidate") {
+      platformApi.getPendingOrders()
+        .then(setPendingOrders)
+        .catch(err => setFeedback(err.message));
+    }
+  }, [userProfile]);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -476,17 +491,63 @@ export default function UserJobsPage() {
         </aside>
 
         <div className="services-content">
+          {userProfile?.role === "candidate" && (
+            <div className="pending-orders-section">
+              <h2 className="section-title">Công việc đang chờ thợ</h2>
+              <div className="service-product-grid">
+                {pendingOrders.map((order) => (
+                  <article key={order.code} className="service-product-card">
+                    <div className="product-image-wrapper">
+                      <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=800" alt="Job" />
+                    </div>
+                    <div className="service-product-body">
+                      <h3>{order.jobTitle || "Dịch vụ tận nơi"}</h3>
+                      <div className="product-meta">
+                        <span className="product-rating">
+                          <Clock size={14} />
+                          {new Date(order.scheduledAt).toLocaleString('vi-VN')}
+                        </span>
+                      </div>
+                      <strong className="product-price">
+                        {order.totalAmount.toLocaleString()}đ
+                      </strong>
+                      <p className="location-text">
+                        <MapPin size={14} /> {order.address}
+                      </p>
+                      <button 
+                        className="button primary product-cta" 
+                        type="button"
+                        onClick={() => navigate(`/orders/${order.code}`)}
+                      >
+                        Xem chi tiết & Nhận việc
+                        <ArrowRight size={15} />
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              {pendingOrders.length === 0 && (
+                <div className="empty-state">
+                  <Search size={48} strokeWidth={1.2} />
+                  <p>Hiện chưa có công việc mới nào.</p>
+                </div>
+              )}
+              <hr className="section-divider" />
+            </div>
+          )}
+
           <div className="services-result-head">
             <div>
-              <h1>Dịch vụ liên quan</h1>
+              <h1>{userProfile?.role === "candidate" ? "Tất cả dịch vụ hệ thống" : "Dịch vụ liên quan"}</h1>
               <p>{displayJobs.length} kết quả cho <strong>{resultLabel}</strong></p>
             </div>
           </div>
+
           <div className="service-product-grid">
             {primaryJobs.map((job) => <ServiceProductCard key={job.code} job={job} onOpen={openJobDetail} />)}
           </div>
 
-          {!primaryJobs.length ? (
+          {!primaryJobs.length && userProfile?.role !== "candidate" ? (
             <div className="empty-state">
               <Search size={48} strokeWidth={1.2} />
               <p>Không có dịch vụ phù hợp với bộ lọc hiện tại.</p>
@@ -617,8 +678,8 @@ function BookingCard({
           </button>
         </div>
       </div>
-      <label className="booking-machine-type">
-        Loại {unitLabel}
+      <div className="booking-machine-type">
+        <label>Loại {unitLabel}</label>
         <select value={selectedVariantCode} onChange={(event) => onVariantChange(event.target.value)}>
           {variants.map((variant) => (
             <option key={variant.code} value={variant.code}>
@@ -628,7 +689,7 @@ function BookingCard({
             </option>
           ))}
         </select>
-      </label>
+      </div>
       <p>
         {isRangePrice ? "Giá tham khảo: " : "Tổng tiền tạm tính: "}
         <strong>

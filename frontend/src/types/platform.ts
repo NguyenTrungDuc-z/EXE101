@@ -113,6 +113,7 @@ export type Application = {
 };
 
 export type Order = {
+  _id?: string;
   code: string;
   jobCode: string;
   employerCode: string;
@@ -126,6 +127,39 @@ export type Order = {
   paymentStatus: string;
   address: string;
   jobTitle?: string;
+  materialTotal?: number;
+  materialStatus?: string;
+  isReviewed?: boolean;
+  invoiceItems?: Array<{ name: string; price: number }>;
+};
+
+export type WalletTransaction = {
+  code: string;
+  userCode: string;
+  type: "deposit" | "withdraw" | "payment" | "earning" | "commission";
+  amount: number;
+  description: string;
+  balanceAfter: number;
+  createdAt: string;
+};
+
+export type MaterialItem = {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+};
+
+export type MaterialList = {
+  code: string;
+  orderCode: string;
+  candidateCode: string;
+  employerCode: string;
+  items: MaterialItem[];
+  totalAmount: number;
+  status: "pending" | "confirmed" | "rejected";
+  note: string;
+  createdAt: string;
 };
 
 export type CheckoutInfo = {

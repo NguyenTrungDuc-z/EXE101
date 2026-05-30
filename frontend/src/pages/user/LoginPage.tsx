@@ -63,42 +63,49 @@ export default function LoginPage() {
         : "Email phải là gmail.com hoặc email công ty/trường học hợp lệ.",
     city: registerCity ? "" : "Vui lòng chọn thành phố/khu vực."
   };
-  const canSubmitRegister =
-    !registerFieldErrors.name && !registerFieldErrors.phone && !registerFieldErrors.email && !registerFieldErrors.city;
+   const canSubmitRegister =
+     !registerFieldErrors.name && !registerFieldErrors.phone && !registerFieldErrors.email && !registerFieldErrors.city;
 
-  useEffect(() => {
-    // Initialize Facebook Login
-    const fbLoginInstance = new FacebookLogin(FB_APP_ID);
-    setFbLogin(fbLoginInstance);
+   // Initialize Facebook Login once on mount
+   useEffect(() => {
+     const fbLoginInstance = new FacebookLogin(FB_APP_ID);
+     setFbLogin(fbLoginInstance);
+   }, []);
 
-    // Initialize Google Login and render the button
-    const googleLoginInstance = new GoogleLogin(GOOGLE_CLIENT_ID);
-    const redirectPath = searchParams.get("redirect") || "/user/workspace";
+   // Initialize Google Login once on mount (only once, never re-run)
+   useEffect(() => {
+     const googleLoginInstance = new GoogleLogin(GOOGLE_CLIENT_ID);
+     const redirectPath = searchParams.get("redirect") || "/user/workspace";
 
-    googleLoginInstance.setOnLoginSuccess((authResponse) => {
-      console.log("Google login success:", authResponse);
-      const decodedUser = googleLoginInstance.decodeCredential(authResponse.credential);
-      const mockUser = {
-        id: decodedUser?.sub || "google_user",
-        name: decodedUser?.name || "Google User",
-        email: decodedUser?.email,
-        token: authResponse.credential,
-      };
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mockUser));
-      window.dispatchEvent(new Event("homeswift-auth"));
-      setFeedback("Đăng nhập Google thành công!");
-      setTimeout(() => navigate(redirectPath), 500);
-    });
+     googleLoginInstance.setOnLoginSuccess(async (authResponse) => {
+       try {
+         const result = await platformApi.loginWithGoogle({ credential: authResponse.credential });
+         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...result.user, token: result.token }));
+         window.dispatchEvent(new Event("homeswift-auth"));
+         setFeedback("Đăng nhập Google thành công!");
+         setTimeout(() => navigate(redirectPath), 500);
+       } catch (error) {
+         setFeedback((error as Error).message);
+       }
+     });
 
-    googleLoginInstance.setOnLoginError((error) => {
-      setFeedback(error.message);
-    });
+     googleLoginInstance.setOnLoginError((error) => {
+       setFeedback(error.message);
+     });
 
-    // Render Google's official button into the div
-    setTimeout(() => {
-      googleLoginInstance.renderButton("google-signin-button");
-    }, 500);
-  }, []);
+     // Render Google button when component mounts
+     setTimeout(() => {
+       googleLoginInstance.renderButton("google-signin-button");
+     }, 500);
+   }, []);
+
+   // Handle mode changes (show/hide Google button)
+   useEffect(() => {
+     const googleButton = document.getElementById("google-signin-button");
+     if (googleButton) {
+       googleButton.style.display = mode === "login" ? "flex" : "none";
+     }
+   }, [mode]);
 
   const handleFacebookLogin = async () => {
     if (!fbLogin) {
@@ -108,18 +115,16 @@ export default function LoginPage() {
     setFeedback("");
     setIsSubmitting(true);
     try {
-      const authResponse = await fbLogin.login();
-      console.log("Facebook login success:", authResponse);
-      const mockUser = {
-        id: authResponse.userID,
-        name: "Facebook User",
-        token: authResponse.accessToken,
-      };
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mockUser));
-      window.dispatchEvent(new Event("homeswift-auth"));
-      const redirectPath = searchParams.get("redirect") || "/user/workspace";
-      setFeedback("Đăng nhập Facebook thành công!");
-      setTimeout(() => navigate(redirectPath), 500);
+     const authResponse = await fbLogin.login();
+     const result = await platformApi.loginWithFacebook({
+       accessToken: authResponse.accessToken,
+       userID: authResponse.userID
+     });
+     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...result.user, token: result.token }));
+     window.dispatchEvent(new Event("homeswift-auth"));
+     const redirectPath = searchParams.get("redirect") || "/user/workspace";
+     setFeedback("Đăng nhập Facebook thành công!");
+     setTimeout(() => navigate(redirectPath), 500);
     } catch (error) {
       setFeedback((error as Error).message);
     } finally {

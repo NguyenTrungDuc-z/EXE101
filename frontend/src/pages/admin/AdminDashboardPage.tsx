@@ -49,32 +49,34 @@ export default function AdminDashboardPage() {
         ))}
       </div>
 
-      <Surface title="Hàng chờ" subtitle="Các đầu việc vận hành đội quản trị cần xử lý">
-        <div className="card-grid">
-          {data?.queues.map((queue) => (
-            <article key={queue.label} className="mini-card">
-              <h3>{queueLabels[queue.label] ?? queue.label}</h3>
-              <strong>{queue.value}</strong>
-              <small>Cam kết xử lý {slaLabels[queue.sla] ?? queue.sla}</small>
-            </article>
-          ))}
-        </div>
-      </Surface>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", alignItems: "start" }}>
+        <Surface title="Hàng chờ" subtitle="Các đầu việc vận hành đội quản trị cần xử lý">
+          <div className="card-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            {data?.queues.map((queue) => (
+              <article key={queue.label} className="mini-card">
+                <h3>{queueLabels[queue.label] ?? queue.label}</h3>
+                <strong>{queue.value}</strong>
+                <small>Cam kết xử lý {slaLabels[queue.sla] ?? queue.sla}</small>
+              </article>
+            ))}
+          </div>
+        </Surface>
 
-      <Surface title="Yêu cầu mới" subtitle="Các yêu cầu mới nhất đi vào nền tảng">
-        <div className="table-like">
-          {data?.recentJobs.map((job) => (
-            <div key={job.code} className="table-row">
-              <span>
-                <strong>{viText(job.title)}</strong>
-                <small>{viText(job.location)}</small>
-              </span>
-              <span>{viText(job.salaryLabel)}</span>
-              <StatusBadge value={job.status} />
-            </div>
-          ))}
-        </div>
-      </Surface>
+        <Surface title="Yêu cầu mới" subtitle="Các yêu cầu mới nhất đi vào nền tảng">
+          <div className="table-like">
+            {data?.recentJobs.map((job) => (
+              <div key={job.code} className="table-row">
+                <span>
+                  <strong>{viText(job.title)}</strong>
+                  <small>{viText(job.location)}</small>
+                </span>
+                <span>{viText(job.salaryLabel)}</span>
+                <StatusBadge value={job.status} />
+              </div>
+            ))}
+          </div>
+        </Surface>
+      </div>
     </div>
   );
 }
