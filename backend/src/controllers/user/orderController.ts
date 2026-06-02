@@ -3,7 +3,9 @@ import { asyncHandler } from "../../middleware/asyncHandler.js";
 import { JobPostModel } from "../../models/JobPost.js";
 import { OrderModel } from "../../models/Order.js";
 import { UserModel } from "../../models/User.js";
+import { ReviewModel } from "../../models/Review.js";
 import TransactionModel from "../../models/Transaction.js";
+import { WalletTransactionModel } from "../../models/WalletTransaction.js";
 
 // API 1: Thợ nhận việc
 export const acceptOrder = asyncHandler(async (req: any, res: Response) => {
@@ -19,7 +21,7 @@ export const acceptOrder = asyncHandler(async (req: any, res: Response) => {
     return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
   }
 
-  if (order.status !== "finding_worker" && order.status !== "pending") {
+  if (order.status !== "PENDING_ASSIGN" && order.status !== "payment_pending") {
     return res.status(400).json({ error: "Đơn hàng này đã có người nhận hoặc không ở trạng thái chờ" });
   }
 
@@ -33,7 +35,8 @@ export const acceptOrder = asyncHandler(async (req: any, res: Response) => {
     orderId,
     {
       candidateCode,
-      status: "confirmed"
+      technicianId: req.user._id,
+      status: "IN_PROGRESS"
     },
     { new: true }
   );
@@ -209,7 +212,7 @@ export const completeAndPayOrder = asyncHandler(async (req: any, res: Response) 
     const updatedOrder = await OrderModel.findByIdAndUpdate(
       orderId,
       {
-        status: "completed",
+        status: "SUCCESS",
         paymentStatus: "paid",
         commissionAmount,
         earningAmount: workerEarning,
@@ -240,8 +243,17 @@ export const completeAndPayOrder = asyncHandler(async (req: any, res: Response) 
 });
 
 // API 5: Lấy danh sách công việc đang chờ thợ (Pending Orders)
-export const getPendingOrders = asyncHandler(async (req: Request, res: Response) => {
-  const orders = await OrderModel.find({ status: "finding_worker" }).sort({ scheduledAt: 1 }).lean();
+export const getPendingOrders = asyncHandler(async (req: any, res: Response) => {
+  const workerCode = req.user.code;
+  
+  // Get orders assigned to this worker with status PENDING_ACCEPT
+  // or all PENDING_ASSIGN orders if worker is not assigned yet
+  const orders = await OrderModel.find({
+    $or: [
+      { status: "PENDING_ACCEPT", candidateCode: workerCode },
+      { status: "PENDING_ASSIGN" }
+    ]
+  }).sort({ scheduledAt: 1 }).lean();
   
   // Map with job titles for display
   const jobCodes = orders.map(o => o.jobCode);
@@ -257,28 +269,257 @@ export const getPendingOrders = asyncHandler(async (req: Request, res: Response)
   res.json(result);
 });
 
-// API 6: Lấy chi tiết đơn hàng theo mã
+// API 6: Lấy chi tiết đơn hàng
 export const getOrderDetail = asyncHandler(async (req: any, res: Response) => {
   const { orderCode } = req.params;
-  const userCode = req.user.code;
-  const userRole = req.user.role;
 
-  const order = await OrderModel.findOne({ code: orderCode }).lean();
-  
+  if (!orderCode) {
+    return res.status(400).json({ error: "Thiếu orderCode" });
+  }
+
+  const order = await OrderModel.findOne({ code: orderCode });
   if (!order) {
-    return res.status(404).json({ error: "Order not found" });
+    return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
   }
 
-  // Kiểm tra quyền truy cập: chỉ employer, candidate của đơn hàng hoặc admin mới được xem
-  if (userRole !== "admin" && order.employerCode !== userCode && order.candidateCode !== userCode) {
-    return res.status(403).json({ error: "Bạn không có quyền truy cập thông tin đơn hàng này" });
+  res.json(order);
+});
+
+
+export const workerResponse = asyncHandler(async (req: any, res: Response) => {
+  const { orderCode } = req.params;
+  const { response } = req.body; // 'accepted' or 'rejected'
+  const workerCode = req.user.code;
+
+  const order = await OrderModel.findOne({ code: orderCode });
+  if (!order) {
+    return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
   }
 
-  const job = await JobPostModel.findOne({ code: order.jobCode }).lean();
-  
+  if (order.candidateCode !== workerCode) {
+    return res.status(403).json({ error: "Bạn không phải là thợ được gán cho đơn này" });
+  }
+
+  if (order.status !== "PENDING_ACCEPT") {
+    return res.status(400).json({ error: "Đơn hàng không ở trạng thái chờ thợ xác nhận" });
+  }
+
+  if (response === "accepted") {
+    order.status = "IN_PROGRESS";
+    order.technicianId = req.user._id;
+  } else if (response === "rejected") {
+    order.status = "PENDING_ASSIGN";
+    order.technicianId = undefined;
+    order.technicianPayout = 0;
+    order.candidateCode = "";
+  } else {
+    return res.status(400).json({ error: "Phản hồi không hợp lệ" });
+  }
+
+  await order.save();
+  res.json({ message: `Đã ${response === "accepted" ? "chấp nhận" : "từ chối"} đơn hàng`, order });
+});
+
+export const completeOrder = asyncHandler(async (req: any, res: Response) => {
+  const { orderCode } = req.params;
+  const userCode = req.user.code;
+
+  const order = await OrderModel.findOne({ code: orderCode });
+  if (!order) {
+    return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
+  }
+
+  // Check if this worker is assigned to the order
+  if (order.candidateCode !== userCode) {
+    return res.status(403).json({ error: "Bạn không phải là thợ của đơn này" });
+  }
+
+  if (order.status !== "IN_PROGRESS" && order.status !== "accepted_by_technician") {
+    return res.status(400).json({ error: "Trạng thái đơn hàng không hợp lệ để hoàn thành" });
+  }
+
+  order.status = "COMPLETED_BY_TECHNICIAN";
+  order.completedAt = new Date();
+  await order.save();
+
   res.json({
-    ...order,
-    jobTitle: job?.title || "Dịch vụ tận nơi",
-    categoryName: job?.categoryCode || "General"
+    message: "Đã xác nhận hoàn thành đơn hàng. Vui lòng chờ khách hàng nghiệm thu.",
+    order
   });
 });
+
+/**
+ * Hàm giải ngân tiền cho thợ (Dùng cho cả Customer API và Cron Job)
+ */
+export const releaseOrderFunds = async (orderId: string) => {
+  const order = await OrderModel.findById(orderId);
+  if (!order || order.isReleased || (order.status !== "COMPLETED_BY_TECHNICIAN" && order.status !== "COMPLETED_PENDING_REVIEW")) {
+    return null;
+  }
+
+  const session = await OrderModel.startSession();
+  session.startTransaction();
+
+  try {
+    let technician = await UserModel.findById(order.technicianId).session(session);
+    
+    if (!technician && order.candidateCode) {
+      technician = await UserModel.findOne({ code: order.candidateCode }).session(session);
+    }
+
+    if (!technician) {
+      throw new Error("Không tìm thấy thợ để giải ngân");
+    }
+
+    // Calculate payout if not set
+    let payoutAmount = order.technicianPayout || 0;
+    if (payoutAmount === 0) {
+      const commissionRate = order.commissionRate || 0.2;
+      const commissionAmount = order.totalAmount * commissionRate;
+      payoutAmount = order.totalAmount - commissionAmount;
+      
+      order.commissionAmount = commissionAmount;
+      order.earningAmount = payoutAmount;
+      order.workerPayout = payoutAmount;
+    }
+    technician.walletBalance = (technician.walletBalance || 0) + payoutAmount;
+    await technician.save({ session });
+
+    await WalletTransactionModel.create(
+      [
+        {
+          code: `TX-RELEASE-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          userCode: technician.code,
+          type: "earning",
+          amount: payoutAmount,
+          description: `Giải ngân tiền đơn hàng ${order.code}`,
+          relatedOrderCode: order.code,
+          balanceAfter: technician.walletBalance,
+          createdAt: new Date()
+        }
+      ],
+      { session }
+    );
+
+    order.status = "COMPLETED";
+    order.isReleased = true;
+    await order.save({ session });
+
+    await session.commitTransaction();
+    return order;
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+};
+
+export const reviewAndReleaseOrder = asyncHandler(async (req: any, res: Response) => {
+  const { orderCode, rating, comment } = req.body;
+  const employerCode = req.user.code;
+
+  const order = await OrderModel.findOne({ code: orderCode, employerCode });
+  if (!order) {
+    return res.status(404).json({ error: "Không tìm thấy đơn hàng hoặc bạn không có quyền" });
+  }
+
+  if (order.status !== "COMPLETED_PENDING_REVIEW" && order.status !== "COMPLETED_BY_TECHNICIAN") {
+    return res.status(400).json({ error: "Đơn hàng chưa được thợ xác nhận hoàn thành" });
+  }
+
+  // 1. Giải ngân tiền
+  await releaseOrderFunds(order._id.toString());
+
+  // 2. Lưu đánh giá
+  const customer = await UserModel.findOne({ code: order.employerCode });
+  const worker = await UserModel.findOne({ code: order.candidateCode });
+
+  if (customer && worker) {
+    await ReviewModel.create({
+      code: `REV-${Date.now()}`,
+      orderId: order._id,
+      customerId: customer._id,
+      technicianId: worker._id,
+      orderCode: order.code,
+      employerCode: order.employerCode,
+      candidateCode: order.candidateCode,
+      rating: rating || 5,
+      comment: comment || "",
+      createdAt: new Date()
+    });
+  }
+
+  order.isReviewed = true;
+  await order.save();
+
+  res.json({
+    message: "Nghiệm thu và giải ngân thành công",
+    order
+  });
+});
+
+
+// API: Thợ phát sinh vật tư
+export const addMaterialRequest = asyncHandler(async (req: any, res: Response) => {
+  const { orderId, name, quantity, price } = req.body;
+  const technicianId = req.user._id;
+
+  if (!orderId || !name || !quantity || !price) {
+    return res.status(400).json({ error: "Thiếu thông tin vật tư" });
+  }
+
+  const order = await OrderModel.findById(orderId);
+  if (!order) {
+    return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
+  }
+
+  if (order.technicianId?.toString() !== technicianId.toString()) {
+    return res.status(403).json({ error: "Bạn không phải là thợ của đơn này" });
+  }
+
+  if (order.status !== "PENDING_ACCEPT" && order.status !== "IN_PROGRESS") {
+    return res.status(400).json({ error: "Chỉ có thể phát sinh vật tư khi đang thực hiện công việc" });
+  }
+
+  // Add material request to array
+  order.materialRequests.push({
+    name: String(name),
+    quantity: Number(quantity),
+    price: Number(price),
+    isApprovedByCustomer: false
+  });
+
+  await order.save();
+  res.status(201).json({ message: "Đã gửi yêu cầu phát sinh vật tư", order });
+});
+
+// API: Khách hàng duyệt vật tư phát sinh
+export const approveMaterialRequest = asyncHandler(async (req: any, res: Response) => {
+  const { orderId, materialIndex } = req.body;
+  const employerCode = req.user.code;
+
+  if (orderId === undefined || materialIndex === undefined) {
+    return res.status(400).json({ error: "Thiếu thông tin" });
+  }
+
+  const order = await OrderModel.findById(orderId);
+  if (!order) {
+    return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
+  }
+
+  if (order.employerCode !== employerCode) {
+    return res.status(403).json({ error: "Bạn không phải là khách hàng của đơn này" });
+  }
+
+  if (materialIndex < 0 || materialIndex >= order.materialRequests.length) {
+    return res.status(400).json({ error: "Chỉ số vật tư không hợp lệ" });
+  }
+
+  // Approve the material request
+  order.materialRequests[materialIndex].isApprovedByCustomer = true;
+
+  await order.save();
+  res.json({ message: "Đã duyệt vật tư phát sinh", order });
+});
+

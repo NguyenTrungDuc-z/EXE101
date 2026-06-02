@@ -1,1036 +1,1028 @@
-import React, { useEffect, useMemo, useState } from "react";
-import type { CSSProperties } from "react";
-import { useNavigate } from "react-router-dom";
-import { LayoutDashboard, ShoppingBag, Wallet, User, HelpCircle, ShieldCheck } from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { platformApi } from "../../api/platformApi";
-import { DEMO_CANDIDATE_CODE } from "../../config";
-import type { Application, Order, UserHome, UserProfile, WalletTransaction, MaterialList } from "../../types/platform";
+import { 
+  LayoutDashboard, 
+  ShoppingBag, 
+  Wallet, 
+  User, 
+  HelpCircle, 
+  Search, 
+  Bell, 
+  Zap,
+  Clock,
+  CheckCircle2,
+  ChevronRight,
+  MoreVertical,
+  MapPin,
+  Star,
+  LogOut,
+  CreditCard,
+  ShieldCheck,
+  Phone,
+  Mail,
+  Camera,
+  Home,
+  Briefcase,
+  Plus,
+  MessageSquare,
+  Upload,
+  ChevronDown
+} from "lucide-react";
 import { viText } from "../../utils/vietnameseText";
-
-const AUTH_STORAGE_KEY = "homeswift_user";
-
-type StoredUser = {
-  code?: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  savedAddresses?: string[];
-  walletBalance?: number;
-  avatar: string;
-  role?: string;
-};
-
-type ProfileSection = "overview" | "orders" | "wallet" | "personal" | "support";
-type OrderTab = "active" | "completed" | "cancelled";
-type OrderView = "list" | "tracking";
-
-type ProfileOrder = {
-  code: string;
-  title: string;
-  service: string;
-  customer: string;
-  technician: string;
-  technicianAvatar: string;
-  date: string;
-  statusLabel: string;
-  progress: number;
-  total: number;
-  tab: OrderTab;
-  icon: "ac" | "fridge" | "cleaning" | "laundry";
-};
-
-const profileMenu: Array<{ id: ProfileSection; label: string; icon: React.ReactNode }> = [
-  { id: "overview", label: "Tổng quan", icon: <LayoutDashboard size={20} /> },
-  { id: "orders", label: "Đơn hàng của tôi", icon: <ShoppingBag size={20} /> },
-  { id: "wallet", label: "Ví & Ưu đãi", icon: <Wallet size={20} /> },
-  { id: "personal", label: "Thông tin cá nhân", icon: <User size={20} /> },
-  { id: "support", label: "Hỗ trợ", icon: <HelpCircle size={20} /> }
-];
-
-const orderTabs: Array<{ id: OrderTab; label: string }> = [
-  { id: "active", label: "Đang diễn ra" },
-  { id: "completed", label: "Đã hoàn thành" },
-  { id: "cancelled", label: "Đã hủy" }
-];
-
-function readStoredUser() {
-  const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-  if (!raw) {
-    return {
-      name: "Nguyễn Văn A",
-      avatar: "https://i.pravatar.cc/120?u=nguyenvana"
-    };
-  }
-
-  try {
-    return JSON.parse(raw) as StoredUser;
-  } catch {
-    return {
-      name: "Nguyễn Văn A",
-      avatar: "https://i.pravatar.cc/120?u=nguyenvana"
-    };
-  }
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("vi-VN").format(value) + "đ";
-}
-
-function formatDate(value?: string) {
-  if (!value) {
-    return "—";
-  }
-
-  return new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric"
-  }).format(new Date(value));
-}
-
-function getOrderTab(status: string): OrderTab {
-  if (["done", "completed"].includes(status)) {
-    return "completed";
-  }
-
-  if (["cancelled", "canceled", "failed"].includes(status)) {
-    return "cancelled";
-  }
-
-  return "active";
-}
-
-function getOrderStatusLabel(status: string) {
-  const labels: Record<string, string> = {
-    payment_pending: "Chờ thanh toán",
-    payment_review: "Chờ admin duyệt tiền",
-    finding_worker: "Đang tìm thợ",
-    pending: "Chờ thợ đến",
-    confirmed: "Đang thực hiện",
-    in_service: "Đang thực hiện",
-    done: "Hoàn thành",
-    completed: "Hoàn thành",
-    cancelled: "Đã hủy",
-    canceled: "Đã hủy",
-    failed: "Đã hủy"
-  };
-
-  return labels[status] ?? "Đang thực hiện";
-}
-
-function getRoleLabel(role?: string) {
-  const labels: Record<string, string> = {
-    admin: "Admin",
-    candidate: "Thợ dịch vụ",
-    employer: "Khách hàng"
-  };
-  return labels[role || ""] ?? "Khách hàng";
-}
-
-const BACKUP_ORDERS: any[] = [
-  {
-    code: "HS-10234",
-    jobTitle: "Vệ sinh máy lạnh Inverter",
-    status: "confirmed",
-    scheduledAt: new Date().toISOString(),
-    totalAmount: 450000,
-    candidateName: "Trần Hoàng Nam",
-    candidateAvatar: "https://i.pravatar.cc/150?u=nam",
-    employerName: "Nguyễn Văn A"
-  },
-  {
-    code: "HS-10235",
-    jobTitle: "Sửa tủ lạnh Side-by-side",
-    status: "completed",
-    scheduledAt: new Date(Date.now() - 86400000).toISOString(),
-    totalAmount: 1200000,
-    candidateName: "Lê Văn Tám",
-    candidateAvatar: "https://i.pravatar.cc/150?u=tam",
-    employerName: "Nguyễn Văn A"
-  }
-];
-
-/**
- * Chuyển đổi dữ liệu thực tế từ API thành ProfileOrder độc lập.
- * Ưu tiên dữ liệu thực tế, chỉ dùng backup khi mảng trống.
- */
-function buildOrders(apiOrders: Order[], user: StoredUser): (ProfileOrder & { rawOrder?: Order })[] {
-  const iconMap: ("ac" | "fridge" | "cleaning" | "laundry")[] = ["ac", "fridge", "cleaning", "laundry"];
-
-  // Nếu có dữ liệu từ API, dùng API. Nếu không, dùng backup.
-  const sourceOrders = (apiOrders && apiOrders.length > 0) ? apiOrders : (BACKUP_ORDERS as Order[]);
-
-  return sourceOrders.map((order, index) => {
-    const tab = getOrderTab(order.status);
-    // Sinh mã code độc lập để tránh trùng key
-    const uniqueCode = order.code ? order.code.replace("ORD-", "HS-") : `HS-VIRTUAL-${index}-${Date.now()}`;
-
-    return {
-      code: uniqueCode,
-      title: viText(order.jobTitle) || `Dịch vụ kỹ thuật #${index + 1}`,
-      service: viText(order.jobTitle) || "Dịch vụ tận nơi",
-      customer: (order as any).employerName || (user.role === "employer" ? user.name : "Khách hàng"),
-      technician: (order as any).candidateName || (user.role === "candidate" ? user.name : "Chưa phân công"),
-      technicianAvatar: (order as any).candidateAvatar || `https://i.pravatar.cc/150?u=${index}`,
-      date: formatDate(order.scheduledAt),
-      statusLabel: getOrderStatusLabel(order.status),
-      progress: tab === "completed" ? 100 : tab === "cancelled" ? 0 : 75,
-      total: order.totalAmount || 0,
-      tab,
-      icon: iconMap[index % 4],
-      rawOrder: order
-    };
-  });
-}
+import type { Order, AuthUser, WalletTransaction, UserProfile } from "../../types/platform";
+import { useNavigate } from "react-router-dom";
 
 export default function UserWorkspacePage() {
-  const [applications, setApplications] = useState<Application[]>([]);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [activeOrderTab, setActiveOrderTab] = useState("ongoing");
   const [orders, setOrders] = useState<Order[]>([]);
-  const [home, setHome] = useState<UserHome | null>(null);
-  const [user, setUser] = useState<StoredUser>(() => readStoredUser());
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [activeSection, setActiveSection] = useState<ProfileSection>("overview");
-  const [activeOrderTab, setActiveOrderTab] = useState<OrderTab>("active");
-  const [orderView, setOrderView] = useState<OrderView>("list");
-  const [selectedOrderCode, setSelectedOrderCode] = useState<string | null>(null);
-  const [walletAmount, setWalletAmount] = useState("");
-  const [withdrawBankName, setWithdrawBankName] = useState("");
-  const [withdrawBankAccount, setWithdrawBankAccount] = useState("");
-  const [withdrawAccountHolder, setWithdrawAccountHolder] = useState("");
-  const [walletFeedback, setWalletFeedback] = useState("");
-
-  // New states for Wallet, Materials, Reviews
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
-  const [currentMaterialList, setCurrentMaterialList] = useState<MaterialList | null>(null);
-  const [newMaterialItem, setNewMaterialItem] = useState({ name: "", quantity: 1, unitPrice: 0 });
-  const [draftMaterials, setDraftMaterials] = useState<any[]>([]);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState("");
-
+  const [loading, setLoading] = useState(true);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedOrderForReview, setSelectedOrderForReview] = useState<Order | null>(null);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
   const navigate = useNavigate();
-  const userCode = user.code ?? DEMO_CANDIDATE_CODE;
 
   useEffect(() => {
-    platformApi.getUserApplications(userCode).then(setApplications);
-    platformApi.getUserOrders(userCode).then(setOrders);
-    platformApi.getUserHome().then(setHome);
-    platformApi.getUserProfile(userCode).then((data) => {
-      setProfile(data);
-      setUser((current) => ({ ...current, ...data }));
-    });
-  }, [userCode]);
-
-  useEffect(() => {
-    const syncUser = () => setUser(readStoredUser());
-    window.addEventListener("homeswift-auth", syncUser);
-    return () => window.removeEventListener("homeswift-auth", syncUser);
+    const raw = localStorage.getItem("homeswift_user");
+    if (raw) {
+      const userData = JSON.parse(raw);
+      setUser(userData);
+      setLoading(true);
+      
+      Promise.all([
+        platformApi.getUserOrders(userData.code),
+        platformApi.getUserProfile(userData.code),
+        platformApi.getWalletHistory(userData.code)
+      ]).then(([ordersData, profileData, txData]) => {
+        setOrders(ordersData);
+        setProfile(profileData);
+        setTransactions(txData);
+      }).finally(() => setLoading(false));
+    }
   }, []);
 
+  // Fetch pending orders when worker-dashboard tab is active
   useEffect(() => {
-    if (activeSection === "wallet") {
-      platformApi.getWalletHistory(userCode).then(setTransactions).catch(console.error);
+    if (activeTab === "worker" && user?.role === "worker") {
+      setLoading(true);
+      platformApi.getPendingOrders()
+        .then((pendingOrders) => {
+          setOrders(pendingOrders);
+        })
+        .catch(err => console.error("Error fetching pending orders:", err))
+        .finally(() => setLoading(false));
     }
-  }, [activeSection, userCode]);
+  }, [activeTab, user?.role]);
 
-  useEffect(() => {
-    if (orderView === "tracking" && selectedOrderCode) {
-      const actualCode = selectedOrderCode.replace(/^HS-/, "ORD-");
-      platformApi.getMaterialList(actualCode).then(res => {
-        if (res && res.length > 0) {
-          setCurrentMaterialList(res[0]);
-        } else {
-          setCurrentMaterialList(null);
-        }
-      }).catch(console.error);
-    }
-  }, [orderView, selectedOrderCode]);
-
-  const profileOrders = useMemo(() => buildOrders(orders, user), [orders, user]);
-  const activeOrder = profileOrders.find((order) => order.tab === "active") ?? profileOrders[0];
-  const visibleOrders = profileOrders.filter((order) => order.tab === activeOrderTab);
-  const selectedOrder = profileOrders.find((order) => order.code === selectedOrderCode) ?? activeOrder;
-  const recentApplications = applications.slice(0, 2);
-  const suggested = home?.categories.slice(0, 4) ?? [];
-
-  const logout = () => {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+const handleLogout = () => {
+    localStorage.removeItem("homeswift_user");
+    localStorage.removeItem("homeswift_token");
+    // Notify other tabs/components (UserLayout) to update user state
     window.dispatchEvent(new Event("homeswift-auth"));
-    navigate("/");
+    navigate("/login");
   };
 
-  const openTracking = (order: ProfileOrder) => {
-    setSelectedOrderCode(order.code);
-    setOrderView("tracking");
-  };
+  const menuItems = [
+    { id: "overview", label: "Tổng quan", icon: <LayoutDashboard size={20} /> },
+    { id: "orders", label: "Đơn hàng của tôi", icon: <ShoppingBag size={20} /> },
+    ...(user?.role === "worker"
+      ? [{ id: "worker", label: "Không gian làm việc của Thợ", icon: <Briefcase size={20} /> }]
+      : []),
+    { id: "wallet", label: "Ví & Ưu đãi", icon: <Wallet size={20} /> },
+    { id: "profile", label: "Thông tin cá nhân", icon: <User size={20} /> },
+    { id: "support", label: "Hỗ trợ", icon: <HelpCircle size={20} /> },
+  ];
 
-  const submitWalletTransaction = async (type: "deposit" | "withdraw") => {
-    const amount = Number(walletAmount);
-    setWalletFeedback("");
-
-    if (!amount || amount < 10000) {
-      setWalletFeedback("Số tiền tối thiểu là 10.000đ.");
-      return;
-    }
-
-    try {
-      const nextProfile = await platformApi.createWalletTransaction({
-        userCode,
-        type,
-        amount,
-        bankName: withdrawBankName,
-        bankAccount: withdrawBankAccount,
-        accountHolder: withdrawAccountHolder
-      });
-      setProfile(nextProfile);
-      setUser((current) => ({ ...current, ...nextProfile }));
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...readStoredUser(), ...nextProfile }));
-      window.dispatchEvent(new Event("homeswift-auth"));
-      setWalletAmount("");
-      setWalletFeedback(type === "deposit" ? "Nạp tiền thành công." : "Đã gửi yêu cầu rút tiền, admin sẽ duyệt sau khi chuyển khoản.");
-    } catch (reason) {
-      setWalletFeedback((reason as Error).message);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed": return "#22C55E";
+      case "confirmed": return "#0066FF";
+      case "finding_worker": return "#F97316";
+      case "payment_review": return "#7C3AED";
+      case "COMPLETED_PENDING_REVIEW": return "#F59E0B";
+      case "COMPLETED": return "#22C55E";
+      case "SUCCESS": return "#22C55E";
+      case "cancelled":
+      case "canceled": return "#EF4444";
+      default: return "#64748B";
     }
   };
 
-  const confirmOrderCompleted = async (order: ProfileOrder) => {
-    const orderCode = order.code.replace(/^HS-/, "ORD-");
-    try {
-      await platformApi.completeUserOrder(orderCode);
-      setOrders(await platformApi.getUserOrders(userCode));
-    } catch (reason) {
-      setWalletFeedback((reason as Error).message);
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "completed": return "Đã hoàn thành";
+      case "confirmed": return "Đã xác nhận";
+      case "finding_worker": return "Đang tìm thợ";
+      case "payment_review": return "Chờ admin duyệt tiền";
+      case "accepted_by_technician": return "Thợ đã nhận việc";
+      case "in_progress": return "Đang thực hiện";
+      case "COMPLETED_PENDING_REVIEW": return "Chờ nghiệm thu";
+      case "COMPLETED_BY_TECHNICIAN": return "Thợ báo hoàn thành";
+      case "COMPLETED": return "Đã hoàn thành";
+      case "SUCCESS": return "Đã hoàn thành";
+      case "cancelled":
+      case "canceled": return "Đã hủy";
+      default: return status;
     }
   };
 
-  const submitReview = async () => {
-    if (!selectedOrder?.rawOrder) return;
-    try {
-      await platformApi.createReview({
-        orderCode: selectedOrder.rawOrder.code,
-        employerCode: user.code ?? "",
-        rating: reviewRating,
-        comment: reviewComment
-      });
-      alert("Cảm ơn bạn đã đánh giá!");
-      const updatedOrders = await platformApi.getUserOrders(userCode);
-      setOrders(updatedOrders);
-    } catch (err: any) {
-      alert(err.message);
+  const getProgress = (status: string) => {
+    switch (status) {
+      case "payment_review": return 25;
+      case "finding_worker": return 40;
+      case "confirmed": return 60;
+      case "accepted_by_technician": return 75;
+      case "in_progress": return 85;
+      case "COMPLETED_BY_TECHNICIAN": return 95;
+      case "COMPLETED_PENDING_REVIEW": return 95;
+      case "COMPLETED": return 100;
+      case "SUCCESS": return 100;
+      case "completed": return 100;
+      default: return 10;
     }
   };
 
-  const addMaterialDraft = () => {
-    if (newMaterialItem.name && newMaterialItem.quantity > 0 && newMaterialItem.unitPrice > 0) {
-      setDraftMaterials([...draftMaterials, { ...newMaterialItem }]);
-      setNewMaterialItem({ name: "", quantity: 1, unitPrice: 0 });
-    }
-  };
-
-  const submitMaterialList = async () => {
-    if (!selectedOrder?.rawOrder || draftMaterials.length === 0) return;
-    try {
-      const res = await platformApi.createMaterialList({
-        orderCode: selectedOrder.rawOrder.code,
-        candidateCode: user.code ?? "",
-        items: draftMaterials,
-        note: ""
-      });
-      setCurrentMaterialList(res);
-      setDraftMaterials([]);
-      alert("Đã gửi danh sách vật tư cho khách hàng.");
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
-
-  const replyMaterialList = async (status: "confirmed" | "rejected") => {
-    if (!selectedOrder?.rawOrder) return;
-    try {
-      const res = await platformApi.confirmMaterialList({
-        orderCode: selectedOrder.rawOrder.code,
-        employerCode: user.code ?? "",
-        status
-      });
-      setCurrentMaterialList(res);
-      const updatedOrders = await platformApi.getUserOrders(userCode);
-      setOrders(updatedOrders);
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
-
-  const renderOverview = () => (
-    <>
-      <h1>Chào buổi sáng, {user.name}!</h1>
-
-      {activeOrder ? (
-        <section className="current-order-card">
-          <div>
-            <span>Đơn hàng đang diễn ra</span>
-            <h2>{activeOrder.title} - {activeOrder.statusLabel}</h2>
-            <div className="progress-row">
-              <span style={{ "--progress": `${activeOrder.progress}%` } as CSSProperties} />
-              <strong>{activeOrder.progress}%</strong>
-            </div>
-            <p>Thông tin: {activeOrder.customer}</p>
-            <p>Thời gian: 09:00 - 20:00 - Địa điểm: dịch vụ tại nhà</p>
-          </div>
-          <article>
-            <span className={`profile-service-icon service-icon service-icon-${activeOrder.icon}`} aria-hidden="true" />
-            <div>
-              <h3>{activeOrder.title} - {activeOrder.date}</h3>
-              <p>Trạng thái: {activeOrder.statusLabel.toLowerCase()}</p>
-              <div className="profile-worker">
-                <img src={activeOrder.technicianAvatar} alt={activeOrder.technician} />
-                <span>{activeOrder.technician}</span>
-              </div>
-            </div>
-            <button className="button primary" type="button">Đặt lại</button>
-          </article>
-        </section>
-      ) : (
-        <section className="current-order-card" style={{ justifyContent: "center", flexDirection: "column", alignItems: "center", gap: 16, padding: "40px 24px" }}>
-          <p style={{ color: "#6b7280", fontSize: 16 }}>Bạn chưa có đơn hàng đang diễn ra.</p>
-          <button className="button primary" type="button" onClick={() => navigate("/")}>Đặt dịch vụ ngay</button>
-        </section>
-      )}
-
-      <section className="profile-section">
-        <h2>Lịch sử dịch vụ gần đây</h2>
-        <div className="history-list">
-          {(recentApplications.length ? recentApplications : applications).slice(0, 2).map((item, index) => (
-            <article key={item.code || index} className="history-card">
-              <span className={`profile-service-icon service-icon service-icon-${index % 2 ? "garden" : "fridge"}`} aria-hidden="true" />
-              <div>
-                <h3>{viText(item.jobTitle) || "Sửa điện lạnh"} - 15/10/2023</h3>
-                <p>Thông tin: dịch vụ</p>
-                <div className="profile-worker">
-                  <img src={user.avatar} alt={user.name} />
-                  <span>{user.name}</span>
-                </div>
-              </div>
-              <div>
-                <strong>Hoàn thành</strong>
-                <p>Thời gian: 09/10/2023</p>
-                <p>Giá đã qua: <b>{viText(item.salaryLabel) || "350.000đ"}</b></p>
-              </div>
-              <button className="button primary" type="button">Đặt lại</button>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="profile-section profile-bottom-grid">
-        <div>
-          <h2>Dịch vụ gợi ý cho bạn</h2>
-          <div className="profile-suggestions">
-            {suggested.map((category, index) => (
-              <article key={category.code}>
-                <span className={`profile-service-icon service-icon service-icon-${index % 2 ? "pest" : "sofa"}`} aria-hidden="true" />
-                <div>
-                  <h3>{viText(category.name)}</h3>
-                  <p>{viText(category.serviceType)} của bạn.</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-        <article className="loyalty-card">
-          <div>
-            <h2>Chương trình khách hàng thân thiết</h2>
-            <p>Chuyển hạng thành viên HomeSwift:</p>
-            <strong>5,000 điểm</strong>
-            <p>Thưởng cho khách hàng thân thiết</p>
-          </div>
-          <span>★</span>
-        </article>
-      </section>
-    </>
-  );
-
-  const renderTracking = () => {
-    if (!selectedOrder) return null;
-    const currentStep = selectedOrder.tab === "completed" ? 4 : selectedOrder.tab === "cancelled" ? 1 : 2;
-    const steps = ["Đang tìm thợ", "Đã xác nhận", "Đang đến", "Đang thực hiện", "Hoàn thành"];
+  const renderOrders = () => {
+    const filteredOrders = orders.filter((order) => {
+      if (activeOrderTab === "ongoing") {
+        return order.status !== "completed" && order.status !== "SUCCESS" && order.status !== "COMPLETED" && order.status !== "cancelled" && order.status !== "canceled";
+      }
+      if (activeOrderTab === "completed") {
+        return order.status === "completed" || order.status === "SUCCESS" || order.status === "COMPLETED";
+      }
+      if (activeOrderTab === "cancelled") {
+        return order.status === "cancelled" || order.status === "canceled";
+      }
+      return true;
+    });
 
     return (
-      <section className="service-tracking-page">
-        <button className="tracking-back" type="button" onClick={() => setOrderView("list")}>
-          ← Quay lại đơn hàng
-        </button>
-        <h1>Theo dõi trạng thái dịch vụ</h1>
-
-        <div className="service-stepper" aria-label="Tiến độ dịch vụ">
-          {steps.map((step, index) => {
-            const done = index < currentStep;
-            const active = index === currentStep;
-
-            return (
-              <div key={step} className={`service-step ${done ? "done" : ""} ${active ? "active" : ""}`}>
-                <span>{done ? "✓" : ""}</span>
-                <p>{step}</p>
-              </div>
-            );
-          })}
+      <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: "32px", borderBottom: "2px solid #E2E8F0" }}>
+          {[
+            { id: "ongoing", label: "Đang diễn ra" },
+            { id: "completed", label: "Đã hoàn thành" },
+            { id: "cancelled", label: "Đã hủy" }
+          ].map((tab) => (
+            <button 
+              key={tab.id}
+              onClick={() => setActiveOrderTab(tab.id)}
+              style={{
+                padding: "12px 0",
+                fontSize: "16px",
+                fontWeight: 700,
+                color: activeOrderTab === tab.id ? "#0066FF" : "#64748B",
+                border: "none",
+                background: "transparent",
+                borderBottom: activeOrderTab === tab.id ? "3px solid #0066FF" : "3px solid transparent",
+                cursor: "pointer",
+                marginBottom: "-2px"
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        <div className="tracking-content">
-          <article className="technician-card">
-            <h2>Kỹ thuật viên của bạn</h2>
-            <img src={selectedOrder.technicianAvatar} alt={selectedOrder.technician} />
-            <strong>{selectedOrder.technician}</strong>
-            <p><span>★</span> 4.8 (124 đánh giá)</p>
-            <div>
-              <button className="button call-button" type="button">☎ [Gọi]</button>
-              <button className="button message-button" type="button">● [Nhắn tin]</button>
+        {/* Orders List */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {loading ? (
+            <div style={{ padding: "40px", textAlign: "center", color: "#94A3B8" }}>Đang tải đơn hàng...</div>
+          ) : filteredOrders.length === 0 ? (
+            <div style={{ padding: "80px", textAlign: "center", background: "white", borderRadius: "32px", border: "1px solid #F1F5F9" }}>
+              <ShoppingBag size={48} color="#CBD5E1" style={{ marginBottom: "16px" }} />
+              <p style={{ fontSize: "16px", fontWeight: 700, color: "#64748B" }}>Bạn chưa có đơn hàng nào</p>
+              <button 
+                onClick={() => navigate("/")}
+                style={{ marginTop: "20px", padding: "12px 24px", background: "#0066FF", color: "white", border: "none", borderRadius: "12px", fontWeight: 700, cursor: "pointer" }}
+              >
+                Đặt lịch ngay
+              </button>
             </div>
-          </article>
-
-          <article className="tracking-info-card">
-            <p><b>▣</b> Hôm nay, 14:30 - 16:30</p>
-            <p><b>●</b> 123 Maple Ave, Apt 4B, Springfield, IL</p>
-            <button type="button">[Hủy lịch đặt]</button>
-          </article>
-
-          <article className="tracking-summary-card" style={{ gridColumn: "1 / -1" }}>
-            <h2>{selectedOrder.title}</h2>
-            <p>Order #{selectedOrder.code}</p>
-            <p>Trạng thái: <b>{selectedOrder.statusLabel}</b></p>
-            <p>Tổng dịch vụ: <b>{formatCurrency(selectedOrder.total)}</b></p>
-            {selectedOrder.rawOrder?.materialTotal ? (
-              <p>Phí vật tư phát sinh: <b>{formatCurrency(selectedOrder.rawOrder.materialTotal)}</b>
-              ({selectedOrder.rawOrder.materialStatus === 'confirmed' ? 'Đã duyệt' : selectedOrder.rawOrder.materialStatus === 'pending' ? 'Chờ duyệt' : 'Từ chối'})</p>
-            ) : null}
-          </article>
-
-          {/* Review Form - Show for Employer when Completed */}
-          {selectedOrder.tab === "completed" && user.role === "employer" && !selectedOrder.rawOrder?.isReviewed && (
-            <article className="tracking-summary-card" style={{ gridColumn: "1 / -1" }}>
-              <h2>Đánh giá dịch vụ</h2>
-              <div style={{ margin: "10px 0" }}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button key={star} type="button" onClick={() => setReviewRating(star)}
-                          style={{ fontSize: 24, color: star <= reviewRating ? "#f4c430" : "#ccc", background: "none", border: "none", cursor: "pointer" }}>★</button>
-                ))}
-              </div>
-              <textarea
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-                placeholder="Nhận xét của bạn..."
-                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #ddd", marginBottom: 10 }}
-              />
-              <button className="button primary" type="button" onClick={submitReview}>Gửi đánh giá</button>
-            </article>
-          )}
-
-          {/* Material List Section */}
-          {(user.role === "candidate" || currentMaterialList) && (
-            <article className="tracking-summary-card" style={{ gridColumn: "1 / -1" }}>
-              <h2>Danh sách vật tư phát sinh</h2>
-
-              {currentMaterialList ? (
+          ) : filteredOrders.map((order) => (
+          <div key={order.code} style={{ 
+            background: "white", 
+            borderRadius: "24px", 
+            padding: "32px", 
+            border: "1px solid #F1F5F9",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "24px"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div style={{ display: "flex", gap: "20px" }}>
+                <div style={{ width: "64px", height: "64px", borderRadius: "16px", background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", color: "#0066FF" }}>
+                  <Zap size={32} />
+                </div>
                 <div>
-                  <table style={{ width: "100%", textAlign: "left", marginBottom: 15, borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ borderBottom: "1px solid #eee" }}>
-                        <th style={{ padding: 8 }}>Vật tư</th>
-                        <th style={{ padding: 8 }}>SL</th>
-                        <th style={{ padding: 8 }}>Đơn giá</th>
-                        <th style={{ padding: 8 }}>Thành tiền</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currentMaterialList.items.map((item, i) => (
-                        <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
-                          <td style={{ padding: 8 }}>{item.name}</td>
-                          <td style={{ padding: 8 }}>{item.quantity}</td>
-                          <td style={{ padding: 8 }}>{formatCurrency(item.unitPrice)}</td>
-                          <td style={{ padding: 8 }}>{formatCurrency(item.quantity * item.unitPrice)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <p style={{ textAlign: "right", fontSize: 18 }}>Tổng cộng: <b>{formatCurrency(currentMaterialList.totalAmount)}</b></p>
-
-                  {currentMaterialList.status === "pending" && user.role === "employer" && (
-                    <div style={{ display: "flex", gap: 10, marginTop: 15 }}>
-                      <button className="button primary" onClick={() => replyMaterialList("confirmed")}>Đồng ý mua</button>
-                      <button className="button" style={{ background: "#fef2f2", color: "#ef4444", border: "1px solid #fca5a5" }} onClick={() => replyMaterialList("rejected")}>Từ chối</button>
+                  <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#1E293B", marginBottom: "4px" }}>{viText(order.jobTitle || "Dịch vụ tận nơi")}</h3>
+                  <div style={{ fontSize: "14px", fontWeight: 600, color: "#94A3B8" }}>Order #{order.code}</div>
+                  {order.technicianId && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "12px" }}>
+                      <img src="https://i.pravatar.cc/150?u=tech" style={{ width: "24px", height: "24px", borderRadius: "50%" }} alt="Tech" />
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#64748B" }}>Kỹ thuật viên: <strong style={{ color: "#1E293B" }}>Siu nhân</strong></span>
                     </div>
-                  )}
-                  {currentMaterialList.status !== "pending" && (
-                    <p style={{ marginTop: 10, color: currentMaterialList.status === "confirmed" ? "green" : "red" }}>
-                      Trạng thái: <b>{currentMaterialList.status === "confirmed" ? "Đã đồng ý mua" : "Đã từ chối"}</b>
-                    </p>
                   )}
                 </div>
-              ) : (
-                user.role === "candidate" && selectedOrder.tab === "active" && (
-                  <div>
-                    <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-                      <input placeholder="Tên vật tư" value={newMaterialItem.name} onChange={e => setNewMaterialItem({...newMaterialItem, name: e.target.value})} style={{ flex: 2, padding: 8, borderRadius: 6, border: "1px solid #ddd" }} />
-                      <input type="number" placeholder="Số lượng" value={newMaterialItem.quantity} onChange={e => setNewMaterialItem({...newMaterialItem, quantity: Number(e.target.value)})} style={{ flex: 1, padding: 8, borderRadius: 6, border: "1px solid #ddd" }} />
-                      <input type="number" placeholder="Đơn giá" value={newMaterialItem.unitPrice || ""} onChange={e => setNewMaterialItem({...newMaterialItem, unitPrice: Number(e.target.value)})} style={{ flex: 1, padding: 8, borderRadius: 6, border: "1px solid #ddd" }} />
-                      <button className="button secondary" onClick={addMaterialDraft}>Thêm</button>
-                    </div>
-
-                    {draftMaterials.length > 0 && (
-                      <div style={{ marginTop: 15 }}>
-                        <ul style={{ listStyle: "none", padding: 0 }}>
-                          {draftMaterials.map((item, i) => (
-                            <li key={i} style={{ padding: "8px 0", borderBottom: "1px dashed #ddd" }}>
-                              {item.name} - SL: {item.quantity} x {formatCurrency(item.unitPrice)} = <b>{formatCurrency(item.quantity * item.unitPrice)}</b>
-                            </li>
-                          ))}
-                        </ul>
-                        <button className="button primary" style={{ marginTop: 15 }} onClick={submitMaterialList}>Gửi cho khách hàng xác nhận</button>
-                      </div>
-                    )}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: "13px", fontWeight: 700, color: "#94A3B8", marginBottom: "4px" }}>Thời gian: <span style={{ color: "#1E293B" }}>{new Date(order.scheduledAt || Date.now()).toLocaleDateString('vi-VN')}</span></div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
+                  <div style={{ fontSize: "14px", fontWeight: 600, color: "#64748B" }}>Trạng thái: <strong style={{ color: getStatusColor(order.status) }}>{getStatusText(order.status)}</strong></div>
+                  <div style={{ width: "200px", height: "8px", background: "#F1F5F9", borderRadius: "4px", overflow: "hidden" }}>
+                    <div style={{ width: `${getProgress(order.status)}%`, height: "100%", background: getStatusColor(order.status), transition: "width 0.5s ease" }} />
                   </div>
-                )
-              )}
-            </article>
-          )}
+                  <span style={{ fontSize: "12px", fontWeight: 700, color: "#94A3B8" }}>{getProgress(order.status)}%</span>
+                </div>
+              </div>
+            </div>
 
-        </div>
-      </section>
+            <div style={{ height: "1px", background: "#F1F5F9" }} />
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: "13px", fontWeight: 700, color: "#94A3B8", marginBottom: "4px" }}>Tổng số tiền:</div>
+                <div style={{ fontSize: "20px", fontWeight: 850, color: "#1E293B" }}>{order.totalAmount.toLocaleString()}đ</div>
+              </div>
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button 
+                  onClick={() => navigate(`/user/orders/${order.code}`)}
+                  style={{ padding: "12px 24px", borderRadius: "12px", border: "1px solid #E2E8F0", background: "white", color: "#1E293B", fontWeight: 700, cursor: "pointer" }}
+                >
+                  Xem chi tiết
+                </button>
+                {(order.status === "COMPLETED_PENDING_REVIEW" || order.status === "COMPLETED_BY_TECHNICIAN") && user?.role === "employer" && (
+                  <button 
+                    onClick={() => {
+                      setSelectedOrderForReview(order);
+                      setShowReviewModal(true);
+                    }}
+                    style={{ padding: "12px 24px", borderRadius: "12px", border: "none", background: "#F59E0B", color: "white", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Nghiệm thu & Đánh giá
+                  </button>
+                )}
+                <button 
+                  onClick={() => navigate(`/booking?jobCode=${order.jobCode}`)}
+                  style={{ padding: "12px 24px", borderRadius: "12px", border: "none", background: "#0066FF", color: "white", fontWeight: 700, cursor: "pointer" }}
+                >
+                  Đặt lại
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
     );
   };
 
-  const renderOrders = () => (
-    <section className="profile-orders-page">
-      {orderView === "tracking" ? renderTracking() : (
-        <>
-          <h1>Đơn hàng của tôi</h1>
-          <div className="order-tabs" role="tablist" aria-label="Trạng thái đơn hàng">
-            {orderTabs.map((tab) => (
-              <button
-                key={tab.id}
-                className={activeOrderTab === tab.id ? "active" : ""}
-                type="button"
-                role="tab"
-                aria-selected={activeOrderTab === tab.id}
-                onClick={() => {
-                  setActiveOrderTab(tab.id);
-                  setOrderView("list");
-                }}
-              >
-                {tab.label}
-              </button>
+  const renderOverview = () => {
+    const activeOrder = orders.find(o => o.status !== 'completed' && o.status !== 'cancelled');
+    const recentOrders = orders.filter(o => o.status === 'completed').slice(0, 2);
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 700, color: "#1E293B" }}>Chào buổi sáng, {user?.name}!</h1>
+
+        {/* Active Order Card */}
+        <div style={{ background: "white", borderRadius: "24px", border: "1px solid #F1F5F9", padding: "24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
+            <div>
+              <div style={{ fontSize: "14px", color: "#64748B", marginBottom: "8px" }}>Đơn hàng đang diễn ra</div>
+              <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#1E293B" }}>{activeOrder ? viText(activeOrder.jobTitle) : "Không có đơn hàng nào"} - {activeOrder ? getStatusText(activeOrder.status) : ""}</h2>
+            </div>
+            {activeOrder && (
+              <div style={{ textAlign: "right" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div style={{ width: "40px", height: "40px", borderRadius: "12px", background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", color: "#0066FF" }}>
+                    <Zap size={20} />
+                  </div>
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ fontSize: "14px", fontWeight: 700 }}>{viText(activeOrder.jobTitle)} - {new Date(activeOrder.scheduledAt).toLocaleDateString('vi-VN')}</div>
+                    <div style={{ fontSize: "12px", color: "#64748B" }}>Trong lành: sạch đẹp điện lạnh</div>
+                  </div>
+                  <button onClick={() => navigate(`/booking?jobCode=${activeOrder.jobCode}`)} style={{ padding: "8px 16px", background: "#0066FF", color: "white", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer" }}>Đặt lại</button>
+                </div>
+              </div>
+            )}
+          </div>
+          {activeOrder && (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+                <div style={{ flex: 1, height: "8px", background: "#F1F5F9", borderRadius: "4px", overflow: "hidden" }}>
+                  <div style={{ width: `${getProgress(activeOrder.status)}%`, height: "100%", background: "#0066FF" }} />
+                </div>
+                <span style={{ fontSize: "14px", fontWeight: 700, color: "#64748B" }}>{getProgress(activeOrder.status)}%</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: "14px", color: "#64748B" }}>
+                  Thông tin: {user?.name}<br />
+                  Thời gian: 09:00 - 20:00 - Địa điểm: dịch vụ tại nhà
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <img src={user?.avatar || "https://i.pravatar.cc/150?u=user"} style={{ width: "32px", height: "32px", borderRadius: "50%" }} alt="User" />
+                  <span style={{ fontSize: "14px", fontWeight: 600 }}>{user?.name}</span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Recent History */}
+        <div>
+          <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#1E293B", marginBottom: "16px" }}>Lịch sử dịch vụ gần đây</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {recentOrders.map((order, idx) => (
+              <div key={idx} style={{ background: "white", borderRadius: "20px", border: "1px solid #F1F5F9", padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                  <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748B" }}>
+                    <Zap size={24} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{viText(order.jobTitle)} - {new Date(order.scheduledAt).toLocaleDateString('vi-VN')}</div>
+                    <div style={{ fontSize: "13px", color: "#64748B" }}>Thông tin: dịch vụ</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                      <img src={user?.avatar || "https://i.pravatar.cc/150?u=user"} style={{ width: "24px", height: "24px", borderRadius: "50%" }} alt="User" />
+                      <span style={{ fontSize: "13px", color: "#64748B" }}>{user?.name}</span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ color: "#22C55E", fontWeight: 700, fontSize: "14px" }}>Hoàn thành</div>
+                  <div style={{ fontSize: "13px", color: "#64748B" }}>Thời gian: {new Date(order.scheduledAt).toLocaleDateString('vi-VN')}</div>
+                  <div style={{ fontSize: "13px", color: "#64748B" }}>Giá đã trả: <strong style={{ color: "#1E293B" }}>{order.totalAmount.toLocaleString()}đ</strong></div>
+                </div>
+                <button onClick={() => navigate(`/booking?jobCode=${order.jobCode}`)} style={{ padding: "8px 20px", background: "#0066FF", color: "white", border: "none", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}>Đặt lại</button>
+              </div>
             ))}
           </div>
+        </div>
 
-          {visibleOrders.length === 0 ? (
-            <div style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 16,
-              padding: "60px 24px",
-              color: "#6b7280"
-            }}>
-              <span style={{ fontSize: 48 }}>📋</span>
-              <p style={{ fontSize: 16, margin: 0 }}>Bạn chưa có đơn hàng nào trong trạng thái này.</p>
-              <button
-                className="button primary"
-                type="button"
-                onClick={() => navigate("/")}
-              >
-                Đặt dịch vụ ngay
-              </button>
-            </div>
-          ) : (
-            <div className="profile-order-list">
-              {visibleOrders.map((order, index) => (
-                <article key={`${order.code}-${index}`} className={`profile-order-card order-${order.tab}`}>
-                  <div className="order-card-main">
-                    <span className={`profile-service-icon service-icon service-icon-${order.icon}`} aria-hidden="true" />
-                    <div>
-                      <h2>{order.title}</h2>
-                      <p>Order #{order.code}</p>
-                    </div>
-                  </div>
-
-                  <p className="order-card-time">Thời gian: <b>{order.date}</b></p>
-
-                  <div className="order-card-detail">
-                    <p>Loại dịch vụ: <b>{order.service}</b></p>
-                    <p>Thông tin: <b>{order.customer}</b></p>
-                  </div>
-
-                  <div className="order-card-worker">
-                    <p>Kỹ thuật viên:</p>
-                    <div className="profile-worker">
-                      <img src={order.technicianAvatar} alt={order.technician} />
-                      <span>{order.technician}</span>
-                    </div>
-                  </div>
-
-                  <div className="order-card-status">
-                    <p>Trạng thái: <b>{order.statusLabel}</b></p>
-                    <div className="progress-row order-progress">
-                      <span style={{ "--progress": `${order.progress}%` } as CSSProperties} />
-                      <strong>{order.progress}%</strong>
-                    </div>
-                  </div>
-
-                  <div className="order-card-footer">
-                    <p>Tổng số tiền: <b>{formatCurrency(order.total)}</b></p>
-                    <div>
-                      <button className="button order-outline" type="button" onClick={() => openTracking(order)}>Xem chi tiết</button>
-                      {order.tab === "active" ? (
-                        <button className="button order-outline" type="button" onClick={() => confirmOrderCompleted(order)}>
-                          Xác nhận hoàn thành
-                        </button>
-                      ) : null}
-                      <button className="button primary" type="button">Đặt lại</button>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-    </section>
-  );
-
-  const renderWallet = () => (
-    <section className="profile-simple-page">
-      <h1>Ví của tôi & Ưu đãi thành viên</h1>
-      <div className="wallet-grid">
-        <article className="wallet-balance-card" style={{ background: "linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%)", color: "white", padding: "24px", borderRadius: "16px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ opacity: 0.9, fontSize: "16px" }}>Ví HomeSwift</span>
-            <Wallet size={24} />
-          </div>
-          <strong style={{ fontSize: "36px", display: "block", margin: "12px 0" }}>{formatCurrency(profile?.walletBalance ?? user.walletBalance ?? 0)}</strong>
-          <p style={{ fontSize: "14px", opacity: 0.8, marginBottom: "20px" }}>Số dư khả dụng để thanh toán dịch vụ</p>
-          <div style={{ display: "flex", gap: "12px" }}>
-            <button className="button" style={{ background: "white", color: "#1e40af", flex: 1 }} onClick={() => submitWalletTransaction("deposit")}>Nạp tiền</button>
-            <button className="button" style={{ background: "rgba(255,255,255,0.2)", color: "white", flex: 1 }} onClick={() => submitWalletTransaction("withdraw")}>Rút tiền</button>
-          </div>
-          {walletFeedback ? <p style={{ marginTop: 10, fontSize: 13 }}>{walletFeedback}</p> : null}
-        </article>
-
-        <article className="loyalty-card" style={{ minHeight: "auto", background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ opacity: 0.9, fontSize: "16px" }}>Điểm thưởng</span>
-            <span style={{ fontSize: 24 }}>★</span>
-          </div>
-          <strong style={{ fontSize: "36px", display: "block", margin: "12px 0" }}>5,240</strong>
-          <p style={{ fontSize: "14px", opacity: 0.8 }}>Hạng thành viên: <b>Vàng</b></p>
-          <button className="button" style={{ background: "white", color: "#d97706", marginTop: "20px", width: "100%" }}>Đổi quà ngay</button>
-        </article>
-      </div>
-
-      <div className="profile-section">
-        <h2>Voucher của bạn</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
-          {[
-            { title: "Giảm 50k", desc: "Cho đơn vệ sinh máy lạnh", color: "#3b82f6" },
-            { title: "Miễn phí vận chuyển", desc: "Cho đơn hàng từ 300k", color: "#10b981" },
-            { title: "Giảm 10%", desc: "Tối đa 100k cho khách mới", color: "#f59e0b" }
-          ].map((v, i) => (
-            <div key={i} style={{ display: "flex", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
-              <div style={{ background: v.color, width: "80px", display: "grid", placeItems: "center", color: "white", fontWeight: "bold" }}>Voucher</div>
-              <div style={{ padding: "12px", flex: 1 }}>
-                <h3 style={{ margin: 0, fontSize: "16px" }}>{v.title}</h3>
-                <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#6b7280" }}>{v.desc}</p>
-                <button style={{ background: "none", border: "none", color: v.color, fontWeight: "bold", padding: 0, marginTop: "8px", cursor: "pointer" }}>Dùng ngay</button>
+        {/* Suggestions & Loyalty */}
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px" }}>
+          <div>
+            <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#1E293B", marginBottom: "16px" }}>Dịch vụ gợi ý cho bạn</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <div style={{ background: "white", padding: "20px", borderRadius: "20px", border: "1px solid #F1F5F9", display: "flex", gap: "16px", alignItems: "center" }}>
+                <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748B" }}>
+                  <Zap size={24} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700 }}>Giặt sofa</div>
+                  <div style={{ fontSize: "12px", color: "#64748B" }}>Giá cố định minh bạch của chúng tôi minh bạch</div>
+                </div>
+              </div>
+              <div style={{ background: "white", padding: "20px", borderRadius: "20px", border: "1px solid #F1F5F9", display: "flex", gap: "16px", alignItems: "center" }}>
+                <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748B" }}>
+                  <Zap size={24} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700 }}>Diệt côn trùng</div>
+                  <div style={{ fontSize: "12px", color: "#64748B" }}>Thợ đã xác minh của mỗi lần văn và bảo bạn.</div>
+                </div>
               </div>
             </div>
-          ))}
+          </div>
+          <div style={{ background: "linear-gradient(135deg, #0066FF 0%, #0052CC 100%)", borderRadius: "24px", padding: "24px", color: "white", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <div style={{ fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Chương trình khách hàng thân thiết</div>
+              <div style={{ fontSize: "12px", opacity: 0.8, marginBottom: "16px" }}>Chuyên hàng thân thiết là HomeSwift</div>
+              <div style={{ fontSize: "24px", fontWeight: 800, marginBottom: "4px" }}>5,000 điểm</div>
+              <div style={{ fontSize: "12px", opacity: 0.8 }}>• Thưởng cho khách hàng thân thiết</div>
+            </div>
+            <Star size={80} style={{ position: "absolute", right: "-10px", bottom: "-10px", opacity: 0.2, color: "white" }} fill="currentColor" />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderWallet = () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+      <h1 style={{ fontSize: "24px", fontWeight: 700, color: "#1E293B" }}>Ví của tôi & Ưu đãi thành viên</h1>
+      
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+        <div style={{ background: "white", padding: "32px", borderRadius: "24px", border: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: "16px", fontWeight: 700, color: "#1E293B", marginBottom: "4px" }}>Ví HomeSwift</div>
+            <div style={{ fontSize: "14px", color: "#64748B", marginBottom: "12px" }}>Số dư khả dụng</div>
+            <div style={{ fontSize: "32px", fontWeight: 850, color: "#0066FF" }}>{user?.walletBalance?.toLocaleString()}đ</div>
+          </div>
+          <button style={{ padding: "12px 24px", background: "#0066FF", color: "white", border: "none", borderRadius: "12px", fontWeight: 700, cursor: "pointer" }}>Nạp tiền</button>
+        </div>
+        <div style={{ background: "white", padding: "32px", borderRadius: "24px", border: "1px solid #F1F5F9" }}>
+          <div style={{ fontSize: "16px", fontWeight: 700, color: "#1E293B", marginBottom: "12px" }}>Điểm thưởng</div>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", color: "#F59E0B" }}>
+              <Star size={24} fill="currentColor" />
+            </div>
+            <div style={{ fontSize: "32px", fontWeight: 850, color: "#F59E0B" }}>5,000 điểm</div>
+          </div>
+          <div style={{ fontSize: "13px", color: "#64748B", marginTop: "8px", display: "flex", alignItems: "center", gap: "4px" }}>
+            <HelpCircle size={14} /> Điểm có thể đổi quà
+          </div>
         </div>
       </div>
 
-      <div className="profile-section">
-        <h2>Lịch sử giao dịch ví</h2>
-        <div style={{ border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-            <thead style={{ background: "#f9fafb" }}>
-              <tr>
-                <th style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>Loại giao dịch</th>
-                <th style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>Ngày tháng</th>
-                <th style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>Số tiền</th>
-                <th style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>Trạng thái</th>
+      <div>
+        <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#1E293B", marginBottom: "16px" }}>Voucher của bạn</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
+          <div style={{ background: "linear-gradient(135deg, #0066FF 0%, #0052CC 100%)", borderRadius: "20px", padding: "20px", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: "18px", fontWeight: 800 }}>Giảm 50k</div>
+              <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "12px" }}>cho đơn từ 200k</div>
+              <button style={{ padding: "6px 16px", background: "white", color: "#0066FF", border: "none", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Dùng ngay</button>
+            </div>
+            <div style={{ fontSize: "24px", fontWeight: 800, opacity: 0.3, transform: "rotate(-90deg)" }}>50k</div>
+          </div>
+          <div style={{ background: "linear-gradient(135deg, #0066FF 0%, #0052CC 100%)", borderRadius: "20px", padding: "20px", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: "18px", fontWeight: 800 }}>Miễn phí</div>
+              <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "12px" }}>vận chuyển</div>
+              <button style={{ padding: "6px 16px", background: "#F59E0B", color: "white", border: "none", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Dùng ngay</button>
+            </div>
+            <Zap size={48} style={{ opacity: 0.3 }} />
+          </div>
+          <div style={{ background: "linear-gradient(135deg, #0066FF 0%, #0052CC 100%)", borderRadius: "20px", padding: "20px", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: "18px", fontWeight: 800 }}>Giảm 10%</div>
+              <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "12px" }}>dịch vụ vệ sinh</div>
+              <button style={{ padding: "6px 16px", background: "white", color: "#0066FF", border: "none", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Dùng ngay</button>
+            </div>
+            <div style={{ fontSize: "24px", fontWeight: 800, opacity: 0.3, transform: "rotate(-90deg)" }}>10%</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#1E293B", marginBottom: "16px" }}>Lịch sử giao dịch ví</h3>
+        <div style={{ background: "white", borderRadius: "24px", border: "1px solid #F1F5F9", overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid #F1F5F9" }}>
+                <th style={{ textAlign: "left", padding: "20px", color: "#64748B", fontSize: "14px", fontWeight: 600 }}>Mô tả</th>
+                <th style={{ textAlign: "left", padding: "20px", color: "#64748B", fontSize: "14px", fontWeight: 600 }}>Ngày tháng</th>
+                <th style={{ textAlign: "right", padding: "20px", color: "#64748B", fontSize: "14px", fontWeight: 600 }}>Số tiền</th>
+                <th style={{ textAlign: "right", padding: "20px", color: "#64748B", fontSize: "14px", fontWeight: 600 }}>Trạng thái</th>
               </tr>
             </thead>
             <tbody>
               {transactions.length === 0 ? (
-                <tr><td colSpan={4} style={{ padding: "24px", textAlign: "center", color: "#6b7280" }}>Chưa có giao dịch nào.</td></tr>
-              ) : (
-                transactions.map((tx) => (
-                  <tr key={tx.code} style={{ borderTop: "1px solid #e5e7eb" }}>
-                    <td style={{ padding: "12px 16px" }}>
-                      <div style={{ fontWeight: 500 }}>{tx.description}</div>
-                      <div style={{ fontSize: "12px", color: "#6b7280" }}>Mã: {tx.code}</div>
-                    </td>
-                    <td style={{ padding: "12px 16px", fontSize: "14px" }}>{new Date(tx.createdAt).toLocaleDateString("vi-VN")}</td>
-                    <td style={{ padding: "12px 16px", fontWeight: "bold", color: ["deposit", "earning"].includes(tx.type) ? "#10b981" : "#ef4444" }}>
-                      {["deposit", "earning"].includes(tx.type) ? "+" : "-"}{formatCurrency(tx.amount)}
-                    </td>
-                    <td style={{ padding: "12px 16px" }}>
-                      <span style={{ background: "#dcfce7", color: "#166534", padding: "4px 8px", borderRadius: "999px", fontSize: "12px" }}>Hoàn thành</span>
-                    </td>
-                  </tr>
-                ))
-              )}
+                <tr><td colSpan={4} style={{ padding: "40px", textAlign: "center", color: "#94A3B8" }}>Chưa có giao dịch nào</td></tr>
+              ) : transactions.map((tx, idx) => (
+                <tr key={idx} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                  <td style={{ padding: "20px", fontWeight: 600 }}>{tx.description}</td>
+                  <td style={{ padding: "20px", color: "#64748B" }}>{new Date(tx.createdAt).toLocaleDateString('vi-VN')}</td>
+                  <td style={{ padding: "20px", textAlign: "right", fontWeight: 700, color: tx.type === 'deposit' ? "#22C55E" : "#EF4444" }}>
+                    {tx.type === 'deposit' ? '+' : '-'}{tx.amount.toLocaleString()}đ
+                  </td>
+                  <td style={{ padding: "20px", textAlign: "right", color: "#22C55E", fontWeight: 600 }}>Hoàn thành</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       </div>
-    </section>
+    </div>
   );
 
-  const renderPersonal = () => (
-    <section className="profile-simple-page">
-      <h1>Thông tin cá nhân</h1>
+  const renderProfile = () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+      <h1 style={{ fontSize: "24px", fontWeight: 700, color: "#1E293B" }}>Thông tin cá nhân</h1>
       
-      <div className="profile-section">
-        <h2>Chỉnh sửa hồ sơ</h2>
-        <div style={{ display: "flex", alignItems: "center", gap: "24px", marginBottom: "24px", padding: "20px", border: "1px solid #e5e7eb", borderRadius: "12px" }}>
+      <div style={{ background: "white", padding: "32px", borderRadius: "24px", border: "1px solid #F1F5F9" }}>
+        <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#1E293B", marginBottom: "24px" }}>Chỉnh sửa hồ sơ</h3>
+        <div style={{ display: "flex", gap: "40px", alignItems: "center" }}>
           <div style={{ position: "relative" }}>
-            <img src={user.avatar} alt={user.name} style={{ width: "100px", height: "100px", borderRadius: "50%", objectFit: "cover" }} />
-            <button style={{ position: "absolute", bottom: 0, right: 0, background: "white", border: "1px solid #ddd", borderRadius: "50%", width: "32px", height: "32px", cursor: "pointer" }}>✎</button>
+            <img src={user?.avatar || "https://i.pravatar.cc/150?u=user"} style={{ width: "100px", height: "100px", borderRadius: "50%", objectFit: "cover" }} alt="Avatar" />
+            <button style={{ position: "absolute", bottom: 0, right: 0, width: "32px", height: "32px", borderRadius: "50%", background: "#0066FF", color: "white", border: "2px solid white", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <Camera size={16} />
+            </button>
           </div>
-          <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "14px", color: "#6b7280" }}>
-              Họ và tên
-              <input value={user.name} style={{ padding: "8px 12px", borderRadius: "6px", border: "1px solid #d1d5db" }} />
-            </label>
-            <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "14px", color: "#6b7280" }}>
-              Số điện thoại
-              <input value={profile?.phone ?? user.phone ?? "0901234567"} style={{ padding: "8px 12px", borderRadius: "6px", border: "1px solid #d1d5db" }} />
-            </label>
-            <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "14px", color: "#6b7280" }}>
-              Email
-              <input value={profile?.email ?? user.email ?? "nguyenvana@gmail.com"} style={{ padding: "8px 12px", borderRadius: "6px", border: "1px solid #d1d5db" }} />
-            </label>
-            <div style={{ display: "flex", alignItems: "flex-end" }}>
-              <button className="button primary" style={{ height: "38px" }}>Lưu thay đổi</button>
+          <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "13px", fontWeight: 700, color: "#64748B" }}>Tên từ avatar</label>
+              <div style={{ position: "relative" }}>
+                <input value={user?.name} style={{ width: "100%", padding: "12px 16px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "12px", fontWeight: 600 }} readOnly />
+                <MoreVertical size={16} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8" }} />
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "13px", fontWeight: 700, color: "#64748B" }}>Số điện thoại (đã xác thực)</label>
+              <div style={{ position: "relative" }}>
+                <input value={profile?.phone || "0901234567"} style={{ width: "100%", padding: "12px 16px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "12px", fontWeight: 600 }} readOnly />
+                <CheckCircle2 size={16} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#22C55E" }} />
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "13px", fontWeight: 700, color: "#64748B" }}>Email</label>
+              <div style={{ position: "relative" }}>
+                <input value={profile?.email || "nguyenvana@email.com"} style={{ width: "100%", padding: "12px 16px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "12px", fontWeight: 600 }} readOnly />
+                <MoreVertical size={16} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8" }} />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="profile-section">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-          <h2>Quản lý địa chỉ</h2>
-          <button style={{ color: "#1e40af", fontWeight: "bold", background: "none", border: "none", cursor: "pointer" }}>+ Thêm địa chỉ mới</button>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-          {[
-            { label: "Nhà riêng", addr: "123 Nguyễn Văn Linh, Quận 7, TP.HCM", isDefault: true },
-            { label: "Văn phòng", addr: "Toà nhà Bitexco, Quận 1, TP.HCM", isDefault: false }
-          ].map((a, i) => (
-            <div key={i} style={{ padding: "16px", border: "1px solid #e5e7eb", borderRadius: "12px", position: "relative" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                <strong style={{ fontSize: "16px" }}>{a.label}</strong>
-                {a.isDefault && <span style={{ fontSize: "12px", background: "#dcfce7", color: "#166534", padding: "2px 8px", borderRadius: "999px" }}>Mặc định</span>}
-              </div>
-              <p style={{ fontSize: "14px", color: "#4b5563", margin: 0 }}>{a.addr}</p>
-              <div style={{ marginTop: "12px", display: "flex", gap: "12px" }}>
-                <button style={{ fontSize: "13px", color: "#1e40af", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Chỉnh sửa</button>
-                <button style={{ fontSize: "13px", color: "#ef4444", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Xóa</button>
+      <div>
+        <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#1E293B", marginBottom: "16px" }}>Quản lý địa chỉ</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+          <div style={{ background: "white", padding: "24px", borderRadius: "24px", border: "1px solid #F1F5F9", display: "flex", gap: "16px" }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "#EFF6FF", color: "#0066FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Home size={24} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, marginBottom: "4px" }}>Nhà</div>
+              <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "16px" }}>123 Đường ABC, Quận 1, TP.HCM</div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button style={{ padding: "6px 20px", background: "white", border: "1px solid #E2E8F0", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Sửa</button>
+                <button style={{ padding: "6px 20px", background: "#FEF2F2", border: "1px solid #FEE2E2", color: "#EF4444", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Xóa</button>
               </div>
             </div>
-          ))}
+          </div>
+          <div style={{ background: "white", padding: "24px", borderRadius: "24px", border: "1px solid #F1F5F9", display: "flex", gap: "16px" }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "#F8FAFC", color: "#64748B", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Briefcase size={24} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, marginBottom: "4px" }}>Văn phòng</div>
+              <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "16px" }}>456 Đường XYZ, Quận 3, TP.HCM</div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button style={{ padding: "6px 20px", background: "white", border: "1px solid #E2E8F0", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Sửa</button>
+                <button style={{ padding: "6px 20px", background: "#FEF2F2", border: "1px solid #FEE2E2", color: "#EF4444", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Xóa</button>
+              </div>
+            </div>
+          </div>
         </div>
+        <button style={{ width: "100%", marginTop: "16px", padding: "14px", background: "white", border: "1px solid #E2E8F0", borderRadius: "16px", color: "#1E293B", fontWeight: 700, cursor: "pointer" }}>[Thêm địa chỉ mới]</button>
       </div>
 
-      <div className="profile-section" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-        <div>
-          <h2>Bảo mật</h2>
-          <div style={{ padding: "16px", border: "1px solid #e5e7eb", borderRadius: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <strong style={{ display: "block", fontSize: "16px" }}>Mật khẩu</strong>
-              <p style={{ fontSize: "14px", color: "#6b7280", margin: 0 }}>Cập nhật lần cuối 3 tháng trước</p>
+      <div>
+        <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#1E293B", marginBottom: "16px" }}>Bảo mật</h3>
+        <button style={{ width: "100%", padding: "14px", background: "white", border: "1px solid #E2E8F0", borderRadius: "16px", color: "#1E293B", fontWeight: 700, cursor: "pointer" }}>[Đổi mật khẩu]</button>
+      </div>
+
+      <div>
+        <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#1E293B", marginBottom: "16px" }}>Tài khoản liên kết</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+          <div style={{ background: "white", padding: "16px 24px", borderRadius: "16px", border: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center" }}>G</div>
+              <span style={{ fontWeight: 600 }}>Google (Đã liên kết)</span>
             </div>
-            <button className="button" style={{ border: "1px solid #d1d5db" }}>Đổi mật khẩu</button>
+            <CheckCircle2 size={20} color="#22C55E" />
           </div>
-        </div>
-        <div>
-          <h2>Tài khoản liên kết</h2>
-          <div style={{ display: "grid", gap: "12px" }}>
-            <div style={{ padding: "12px 16px", border: "1px solid #e5e7eb", borderRadius: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontSize: "20px" }}>G</span>
-                <span style={{ fontSize: "14px" }}>Google</span>
-              </div>
-              <span style={{ fontSize: "13px", color: "#10b981" }}>Đã liên kết</span>
+          <div style={{ background: "white", padding: "16px 24px", borderRadius: "16px", border: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#1877F2", color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>f</div>
+              <span style={{ fontWeight: 600 }}>Facebook (Chưa liên kết)</span>
             </div>
-            <div style={{ padding: "12px 16px", border: "1px solid #e5e7eb", borderRadius: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontSize: "20px" }}>f</span>
-                <span style={{ fontSize: "14px" }}>Facebook</span>
-              </div>
-              <button style={{ fontSize: "13px", color: "#1e40af", background: "none", border: "none", cursor: "pointer" }}>Liên kết ngay</button>
-            </div>
+            <ChevronRight size={20} color="#94A3B8" />
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 
-  const renderSupport = () => (
-    <section className="profile-simple-page">
-      <h1>Hỗ trợ & Trợ giúp</h1>
-      
-      <div style={{ marginBottom: "32px" }}>
-        <div style={{ position: "relative", maxWidth: "500px" }}>
-          <input placeholder="Tìm kiếm câu hỏi hoặc vấn đề của bạn..." style={{ width: "100%", padding: "12px 16px 12px 40px", borderRadius: "999px", border: "1px solid #d1d5db" }} />
-          <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }}>🔍</span>
-        </div>
-      </div>
-
-      <div className="profile-section">
-        <h2>Các danh mục FAQ phổ biến</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
-          {[
-            { title: "Chính sách hoàn tiền", icon: "💰" },
-            { title: "Cách đổi lịch hẹn", icon: "📅" },
-            { title: "Bảo hiểm hư hại", icon: "🛡️" }
-          ].map((faq, i) => (
-            <div key={i} style={{ padding: "20px", border: "1px solid #e5e7eb", borderRadius: "12px", textAlign: "center", cursor: "pointer" }}>
-              <div style={{ fontSize: "32px", marginBottom: "12px" }}>{faq.icon}</div>
-              <strong style={{ fontSize: "15px" }}>{faq.title}</strong>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="profile-section">
-        <h2>Khu vực liên hệ trực tiếp</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-          <div style={{ padding: "24px", background: "#eff6ff", borderRadius: "16px", display: "flex", gap: "16px" }}>
-            <div style={{ width: "48px", height: "48px", background: "#3b82f6", borderRadius: "12px", display: "grid", placeItems: "center", color: "white", fontSize: "24px" }}>💬</div>
-            <div>
-              <h3 style={{ margin: "0 0 4px", fontSize: "18px" }}>Chat với chúng tôi</h3>
-              <p style={{ margin: "0 0 16px", fontSize: "14px", color: "#4b5563" }}>Thời gian phản hồi trung bình: 5 phút</p>
-              <button className="button primary">Bắt đầu chat</button>
-            </div>
-          </div>
-          <div style={{ padding: "24px", background: "#f0fdf4", borderRadius: "16px", display: "flex", gap: "16px" }}>
-            <div style={{ width: "48px", height: "48px", background: "#22c55e", borderRadius: "12px", display: "grid", placeItems: "center", color: "white", fontSize: "24px" }}>📞</div>
-            <div>
-              <h3 style={{ margin: "0 0 4px", fontSize: "18px" }}>Hotline 24/7</h3>
-              <p style={{ margin: "0 0 4px", fontSize: "14px", color: "#4b5563" }}>Gọi ngay để được hỗ trợ khẩn cấp</p>
-              <strong style={{ fontSize: "20px", color: "#166534" }}>1900 888 666</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="profile-section">
-        <h2>Gửi yêu cầu hỗ trợ / khiếu nại</h2>
-        <div style={{ padding: "24px", border: "1px solid #e5e7eb", borderRadius: "16px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
-            <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "14px" }}>
-              Chủ đề
-              <select style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}>
-                <option>Vấn đề về thanh toán</option>
-                <option>Chất lượng dịch vụ</option>
-                <option>Kỹ thuật viên</option>
-                <option>Khác</option>
-              </select>
-            </label>
-            <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "14px" }}>
-              Mã đơn hàng (nếu có)
-              <input placeholder="Ví dụ: HS-10234" style={{ padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }} />
-            </label>
-          </div>
-          <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "14px", marginBottom: "16px" }}>
-            Mô tả chi tiết
-            <textarea rows={4} placeholder="Vui lòng mô tả vấn đề bạn đang gặp phải..." style={{ padding: "12px", borderRadius: "8px", border: "1px solid #d1d5db" }} />
-          </label>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <button style={{ background: "none", border: "1px dashed #d1d5db", padding: "8px 16px", borderRadius: "8px", cursor: "pointer" }}>📎 Tải tệp đính kèm</button>
-            <button className="button primary">Gửi yêu cầu</button>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-
-  const renderActiveSection = () => {
-    if (activeSection === "orders") {
-      return renderOrders();
-    }
-
-    if (activeSection === "wallet") {
-      return renderWallet();
-    }
-
-    if (activeSection === "personal") {
-      return renderPersonal();
-    }
-
-    if (activeSection === "support") {
-      return renderSupport();
-    }
-
-    return renderOverview();
+  const handleWorkerResponse = (orderCode: string, response: "accepted" | "rejected") => {
+    platformApi.respondToOrder(orderCode, response)
+      .then(() => {
+        alert(`Đã ${response === "accepted" ? "chấp nhận" : "từ chối"} đơn hàng`);
+        window.location.reload();
+      })
+      .catch(err => alert("Lỗi: " + err.message));
   };
 
-  return (
-    <div className="profile-page">
-      <aside className="profile-sidebar">
-        <div className="profile-sidebar-brand">
-          <span className="brand-icon" aria-hidden="true" />
-          <strong>Home<span>Swift</span></strong>
-        </div>
-        <nav className="profile-menu" aria-label="Hồ sơ cá nhân">
-          {profileMenu.map((item) => (
-            <button
-              key={item.id}
-              className={activeSection === item.id ? "active" : ""}
-              type="button"
-              onClick={() => {
-                setActiveSection(item.id);
-                if (item.id !== "orders") {
-                  setOrderView("list");
-                }
-              }}
-            >
-              <span>{item.icon}</span>{item.label}
-            </button>
-          ))}
-          {user.role === "admin" && (
-            <button
-              type="button"
-              onClick={() => navigate("/admin")}
-              style={{ marginTop: 10, borderTop: "1px solid #eee", paddingTop: 20, borderRadius: 0 }}
-            >
-              <span><ShieldCheck size={20} /></span>Quản trị hệ thống
-            </button>
-          )}
-        </nav>
-        <button className="profile-logout" type="button" onClick={logout}>
-          Đăng xuất
-        </button>
-      </aside>
+  const handleCompleteOrder = (orderCode: string) => {
+    if (confirm("Bạn xác nhận đã hoàn thành công việc này?")) {
+      platformApi.completeOrder(orderCode)
+        .then(() => {
+          alert("Đã báo cáo hoàn thành công việc. Vui lòng chờ khách hàng nghiệm thu.");
+          window.location.reload();
+        })
+        .catch(err => alert("Lỗi: " + err.message));
+    }
+  };
 
-      <main className="profile-main">
-        <header className="profile-top">
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <button className="notification-button" type="button" aria-label="Thông báo">
-              <span />
-            </button>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px" }}>
-              <strong style={{ fontSize: "14px", color: "#111827" }}>{user.name}</strong>
-              <span style={{ fontSize: "12px", color: "#59636f" }}>{getRoleLabel(user.role)}</span>
+  const handleReviewOrder = () => {
+    if (!selectedOrderForReview) return;
+    
+    platformApi.reviewOrder(selectedOrderForReview.code, { rating, comment })
+      .then(() => {
+        alert("Cảm ơn bạn đã đánh giá dịch vụ!");
+        setShowReviewModal(false);
+        window.location.reload();
+      })
+      .catch(err => alert("Lỗi: " + err.message));
+  };
+
+  const renderWorkerDashboard = () => {
+    const pendingAcceptOrders = orders.filter(o => o.status === "PENDING_ASSIGN" || o.status === "PENDING_ACCEPT");
+    const inProgressOrders = orders.filter(o => o.status === "IN_PROGRESS");
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 700, color: "#1E293B" }}>Công việc được gán</h1>
+        
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {pendingAcceptOrders.length === 0 ? (
+            <div style={{ padding: "80px", textAlign: "center", background: "white", borderRadius: "32px", border: "1px solid #F1F5F9" }}>
+              <Briefcase size={48} color="#CBD5E1" style={{ marginBottom: "16px" }} />
+              <p style={{ fontSize: "16px", fontWeight: 700, color: "#64748B" }}>Hiện chưa có công việc mới nào được gán cho bạn</p>
+            </div>
+          ) : pendingAcceptOrders.map((order) => (
+            <div key={order.code} style={{ 
+              background: "white", 
+              borderRadius: "24px", 
+              padding: "32px", 
+              border: "1px solid #F1F5F9",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "24px"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ display: "flex", gap: "20px" }}>
+                  <div style={{ width: "64px", height: "64px", borderRadius: "16px", background: "#F0FDF4", display: "flex", alignItems: "center", justifyContent: "center", color: "#22C55E" }}>
+                    <Zap size={32} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#1E293B", marginBottom: "4px" }}>{viText(order.jobTitle || "Dịch vụ tận nơi")}</h3>
+                    <div style={{ fontSize: "14px", fontWeight: 600, color: "#94A3B8" }}>Mã đơn: {order.code}</div>
+                    <div style={{ fontSize: "14px", fontWeight: 600, color: "#64748B", marginTop: "8px" }}>Địa chỉ: {order.address}</div>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#94A3B8", marginBottom: "4px" }}>Tiền công dự kiến:</div>
+                  <div style={{ fontSize: "24px", fontWeight: 850, color: "#22C55E" }}>{(order.technicianPayout || 0).toLocaleString()}đ</div>
+                </div>
+              </div>
+
+              <div style={{ height: "1px", background: "#F1F5F9" }} />
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: "14px", color: "#64748B" }}>
+                  Thời gian hẹn: <strong>{new Date(order.scheduledAt || Date.now()).toLocaleString('vi-VN')}</strong>
+                </div>
+                <div style={{ display: "flex", gap: "12px" }}>
+                  <button 
+                    onClick={() => handleWorkerResponse(order.code, "rejected")}
+                    style={{ padding: "12px 24px", borderRadius: "12px", border: "none", background: "#EF4444", color: "white", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Từ chối
+                  </button>
+                  <button 
+                    onClick={() => handleWorkerResponse(order.code, "accepted")}
+                    style={{ padding: "12px 24px", borderRadius: "12px", border: "none", background: "#22C55E", color: "white", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Đồng ý đi làm
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {inProgressOrders.length > 0 && (
+            <>
+              <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#1E293B", marginTop: "20px" }}>Công việc đang thực hiện</h2>
+              {inProgressOrders.map((order) => (
+                <div key={order.code} style={{ 
+                  background: "white", 
+                  borderRadius: "24px", 
+                  padding: "32px", 
+                  border: "1px solid #F1F5F9",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "24px"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ display: "flex", gap: "20px" }}>
+                      <div style={{ width: "64px", height: "64px", borderRadius: "16px", background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", color: "#0066FF" }}>
+                        <Clock size={32} />
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#1E293B", marginBottom: "4px" }}>{viText(order.jobTitle || "Dịch vụ tận nơi")}</h3>
+                        <div style={{ fontSize: "14px", fontWeight: 600, color: "#94A3B8" }}>Mã đơn: {order.code}</div>
+                        <div style={{ fontSize: "14px", fontWeight: 600, color: "#64748B", marginTop: "8px" }}>Địa chỉ: {order.address}</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "#94A3B8", marginBottom: "4px" }}>Tiền công:</div>
+                      <div style={{ fontSize: "24px", fontWeight: 850, color: "#0066FF" }}>{(order.technicianPayout || 0).toLocaleString()}đ</div>
+                    </div>
+                  </div>
+
+                  <div style={{ height: "1px", background: "#F1F5F9" }} />
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ fontSize: "14px", color: "#64748B" }}>
+                      Trạng thái: <strong style={{ color: "#0066FF" }}>Đang thực hiện</strong>
+                    </div>
+                    <button 
+                      onClick={() => handleCompleteOrder(order.code)}
+                      style={{ padding: "12px 24px", borderRadius: "12px", border: "none", background: "#0066FF", color: "white", fontWeight: 700, cursor: "pointer" }}
+                    >
+                      Báo cáo hoàn thành
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderSupport = () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+      <h1 style={{ fontSize: "24px", fontWeight: 700, color: "#1E293B" }}>Trung tâm trợ giúp & Hỗ trợ khách hàng</h1>
+      
+      <div style={{ position: "relative" }}>
+        <Search size={20} style={{ position: "absolute", right: "20px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8" }} />
+        <input placeholder="Tìm câu hỏi thường gặp..." style={{ width: "100%", padding: "16px 24px", background: "white", border: "1px solid #E2E8F0", borderRadius: "16px", fontSize: "15px" }} />
+      </div>
+
+      <div>
+        <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#1E293B", marginBottom: "16px" }}>Các danh mục FAQ phổ biến</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
+          <div style={{ background: "white", padding: "24px", borderRadius: "24px", border: "1px solid #F1F5F9", textAlign: "center" }}>
+            <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center", color: "#0066FF", margin: "0 auto 16px" }}>
+              <Wallet size={28} />
+            </div>
+            <div style={{ fontWeight: 700, marginBottom: "4px" }}>Chính sách hoàn tiền</div>
+            <div style={{ fontSize: "12px", color: "#64748B" }}>Chính sách hoàn tiền - chính sách hoàn tiền</div>
+          </div>
+          <div style={{ background: "white", padding: "24px", borderRadius: "24px", border: "1px solid #F1F5F9", textAlign: "center" }}>
+            <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center", color: "#0066FF", margin: "0 auto 16px" }}>
+              <Clock size={28} />
+            </div>
+            <div style={{ fontWeight: 700, marginBottom: "4px" }}>Cách đổi lịch hẹn</div>
+            <div style={{ fontSize: "12px", color: "#64748B" }}>Cách đổi lịch hẹn và cùng cách đổi lịch hẹn và sên.</div>
+          </div>
+          <div style={{ background: "white", padding: "24px", borderRadius: "24px", border: "1px solid #F1F5F9", textAlign: "center" }}>
+            <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center", color: "#0066FF", margin: "0 auto 16px" }}>
+              <ShieldCheck size={28} />
+            </div>
+            <div style={{ fontWeight: 700, marginBottom: "4px" }}>Bảo hiểm hư hại</div>
+            <div style={{ fontSize: "12px", color: "#64748B" }}>Bảo hiểm hư hại và công xo ítàng bảo hiểm hư hại.</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#1E293B", marginBottom: "16px" }}>Khu vực liên hệ trực tiếp</h3>
+        <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+          <button style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 24px", background: "#0066FF", color: "white", border: "none", borderRadius: "12px", fontWeight: 700, cursor: "pointer" }}>
+            <MessageSquare size={20} /> Chat với chúng tôi
+          </button>
+          <div style={{ fontWeight: 700, color: "#1E293B" }}>Hotline hỗ trợ 24/7: <span style={{ color: "#0066FF" }}>1900 1234</span></div>
+        </div>
+      </div>
+
+      <div style={{ background: "white", padding: "32px", borderRadius: "24px", border: "1px solid #F1F5F9" }}>
+        <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#1E293B", marginBottom: "24px" }}>Gửi yêu cầu hỗ trợ/khiếu nại</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <label style={{ fontSize: "14px", fontWeight: 700, color: "#64748B" }}>Chủ đề</label>
+            <div style={{ position: "relative" }}>
+              <select style={{ width: "100%", padding: "14px 16px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "12px", appearance: "none", fontWeight: 600 }}>
+                <option>Chủ đề</option>
+              </select>
+              <ChevronDown size={20} style={{ position: "absolute", right: "16px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8" }} />
             </div>
           </div>
-          <img src={user.avatar} alt={user.name} />
-        </header>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <label style={{ fontSize: "14px", fontWeight: 700, color: "#64748B" }}>Mô tả chi tiết</label>
+            <textarea placeholder="Mô tả chi tiết" style={{ width: "100%", padding: "16px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "12px", minHeight: "120px", resize: "none" }} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <label style={{ fontSize: "14px", fontWeight: 700, color: "#64748B" }}>Tải lên tệp đính kèm</label>
+            <button style={{ width: "100%", padding: "14px", background: "white", border: "1px dashed #E2E8F0", borderRadius: "12px", color: "#64748B", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", cursor: "pointer" }}>
+              <Upload size={20} /> Tải lên tệp đính kèm
+            </button>
+          </div>
+          <button style={{ padding: "14px", background: "#0066FF", color: "white", border: "none", borderRadius: "12px", fontWeight: 700, cursor: "pointer", width: "fit-content" }}>Gửi yêu cầu</button>
+        </div>
+      </div>
+    </div>
+  );
 
-        <section className="profile-content">
-          {renderActiveSection()}
-        </section>
+  return (
+    <div style={{ display: "flex", minHeight: "100vh", background: "#F8FAFC", fontFamily: 'Inter, sans-serif' }}>
+      {/* Sidebar */}
+      <aside style={{ 
+        width: "280px", 
+        background: "white", 
+        borderRight: "1px solid #E2E8F0", 
+        display: "flex", 
+        flexDirection: "column",
+        position: "fixed",
+        height: "100vh",
+        zIndex: 100
+      }}>
+        <div style={{ padding: "32px 24px 20px", display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{ 
+            width: "32px", 
+            height: "32px", 
+            background: "#0066FF", 
+            borderRadius: "8px", 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center",
+            color: "white"
+          }}>
+            <ShieldCheck size={20} fill="currentColor" />
+          </div>
+          <span style={{ fontSize: "22px", fontWeight: 800, color: "#1E293B", letterSpacing: "-0.5px" }}>HomeSwift</span>
+        </div>
+
+        <nav style={{ flex: 1, padding: "0 16px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            {menuItems.map((item) => (
+              <button 
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  padding: "12px 16px",
+                  borderRadius: "12px",
+                  border: "none",
+                  background: activeTab === item.id ? "#EFF6FF" : "transparent",
+                  color: activeTab === item.id ? "#0066FF" : "#64748B",
+                  fontWeight: 600,
+                  fontSize: "15px",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  textAlign: "left",
+                  width: "100%"
+                }}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </button>
+            ))}
+
+            {user?.role === "admin" && (
+              <button 
+                onClick={() => navigate("/admin")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  padding: "12px 16px",
+                  borderRadius: "12px",
+                  border: "1px solid #0066FF",
+                  background: "white",
+                  color: "#0066FF",
+                  fontWeight: 700,
+                  fontSize: "15px",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  textAlign: "left",
+                  width: "100%",
+                  marginTop: "12px",
+                  marginBottom: "4px"
+                }}
+              >
+                <ShieldCheck size={20} />
+                <span>Bảng điều khiển Admin</span>
+              </button>
+            )}
+
+            <button 
+              onClick={handleLogout}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                padding: "12px 16px",
+                borderRadius: "12px",
+                border: "none",
+                background: "transparent",
+                color: "#EF4444",
+                fontWeight: 600,
+                fontSize: "15px",
+                cursor: "pointer",
+                transition: "all 0.2s",
+                textAlign: "left",
+                width: "100%",
+                marginTop: "8px"
+              }}
+              onMouseOver={(e) => e.currentTarget.style.background = "#FEF2F2"}
+              onMouseOut={(e) => e.currentTarget.style.background = "transparent"}
+            >
+              <LogOut size={20} />
+              <span>Đăng xuất</span>
+            </button>
+          </div>
+        </nav>
+
+      </aside>
+
+      {/* Main Content */}
+      <main style={{ flex: 1, marginLeft: "280px", padding: "44px 40px" }}>
+        {activeTab === "overview" && renderOverview()}
+        {activeTab === "orders" && renderOrders()}
+        {activeTab === "worker" && renderWorkerDashboard()}
+        {activeTab === "wallet" && renderWallet()}
+        {activeTab === "profile" && renderProfile()}
+        {activeTab === "support" && renderSupport()}
       </main>
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "white",
+            borderRadius: "32px",
+            padding: "40px",
+            width: "100%",
+            maxWidth: "500px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "24px"
+          }}>
+            <div style={{ textAlign: "center" }}>
+              <h2 style={{ fontSize: "24px", fontWeight: 800, color: "#1E293B", marginBottom: "8px" }}>Nghiệm thu & Đánh giá</h2>
+              <p style={{ color: "#64748B" }}>Vui lòng đánh giá chất lượng dịch vụ của thợ để hoàn tất đơn hàng.</p>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "center", gap: "12px" }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button 
+                  key={star}
+                  onClick={() => setRating(star)}
+                  style={{ border: "none", background: "transparent", cursor: "pointer", padding: 0 }}
+                >
+                  <Star 
+                    size={40} 
+                    fill={star <= rating ? "#F59E0B" : "none"} 
+                    color={star <= rating ? "#F59E0B" : "#CBD5E1"} 
+                  />
+                </button>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "14px", fontWeight: 700, color: "#64748B" }}>Nhận xét của bạn</label>
+              <textarea 
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Chia sẻ trải nghiệm của bạn về dịch vụ này..."
+                style={{ 
+                  width: "100%", 
+                  padding: "16px", 
+                  background: "#F8FAFC", 
+                  border: "1px solid #E2E8F0", 
+                  borderRadius: "16px", 
+                  minHeight: "120px", 
+                  resize: "none",
+                  fontSize: "15px"
+                }} 
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "16px" }}>
+              <button 
+                onClick={() => setShowReviewModal(false)}
+                style={{ flex: 1, padding: "14px", borderRadius: "16px", border: "1px solid #E2E8F0", background: "white", color: "#64748B", fontWeight: 700, cursor: "pointer" }}
+              >
+                Hủy
+              </button>
+              <button 
+                onClick={handleReviewOrder}
+                style={{ flex: 1, padding: "14px", borderRadius: "16px", border: "none", background: "#0066FF", color: "white", fontWeight: 700, cursor: "pointer" }}
+              >
+                Gửi & Giải ngân
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

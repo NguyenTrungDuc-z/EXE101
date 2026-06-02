@@ -49,7 +49,7 @@ export type Employer = {
   totalJobs: number;
 };
 
-export type Candidate = {
+export type Worker = {
   code: string;
   name: string;
   email: string;
@@ -103,7 +103,7 @@ export type Category = {
 export type Application = {
   code: string;
   jobCode: string;
-  candidateCode: string;
+  workerCode: string;
   status: string;
   note: string;
   appliedAt: string;
@@ -117,20 +117,26 @@ export type Order = {
   code: string;
   jobCode: string;
   employerCode: string;
-  candidateCode: string;
+  workerCode: string;
   status: string;
   scheduledAt: string;
   totalAmount: number;
   frozenBalance?: number;
   platformFee?: number;
   workerPayout?: number;
+  technicianPayout?: number;
+  technicianId?: string;
   paymentStatus: string;
   address: string;
   jobTitle?: string;
   materialTotal?: number;
   materialStatus?: string;
   isReviewed?: boolean;
+  completedAt?: string;
+  isReleased?: boolean;
   invoiceItems?: Array<{ name: string; price: number }>;
+  materialRequests?: Array<{ name: string; quantity: number; price: number; isApprovedByCustomer: boolean }>;
+  categoryName?: string;
 };
 
 export type WalletTransaction = {
@@ -153,7 +159,7 @@ export type MaterialItem = {
 export type MaterialList = {
   code: string;
   orderCode: string;
-  candidateCode: string;
+  workerCode: string;
   employerCode: string;
   items: MaterialItem[];
   totalAmount: number;
@@ -180,7 +186,7 @@ export type UserHome = {
   hero: {
     totalOpenJobs: number;
     totalEmployers: number;
-    totalCandidates: number;
+    totalWorkers: number;
     activeOrders: number;
   };
   categories: Category[];
@@ -225,7 +231,15 @@ export type OperationsResponse = {
   alerts: {
     pendingJobs: Array<{ code: string; title: string; type: string }>;
     reviewEmployers: Array<{ code: string; title: string; type: string }>;
-    escrowOrders: Array<{ code: string; title: string; amount: number; transferContent: string; address: string; status: string }>;
+    escrowOrders: Array<{
+      _id?: string;
+      code: string;
+      title: string;
+      amount: number;
+      transferContent: string;
+      address: string;
+      status: string;
+    }>;
     withdrawals: Array<{ code: string; userCode: string; amount: number; method: string; status: string; createdAt: string }>;
     complaints: Complaint[];
   };

@@ -321,7 +321,11 @@ export default function EmployerPostJobPage() {
           <h1>Thanh toán chuyển khoản</h1>
           <div className="checkout-grid">
             <article className="checkout-qr-card">
-              <img src={checkout.qrUrl} alt={`QR thanh toán đơn ${createdOrder.code}`} />
+              <img 
+                src={checkout.qrUrl} 
+                alt={`QR thanh toán đơn ${createdOrder.code}`} 
+                crossOrigin="anonymous"
+              />
               <div>
                 <span>Số tiền</span>
                 <strong>{formatCurrency(createdOrder.totalAmount)}</strong>
@@ -558,7 +562,11 @@ export default function EmployerPostJobPage() {
 
             {paymentMethod === "bank_transfer" ? (
               <article className="payment-qr-preview">
-                <img src={previewQrUrl} alt="QR chuyển khoản ngân hàng" />
+                <img 
+                  src={previewQrUrl} 
+                  alt="QR chuyển khoản ngân hàng" 
+                  crossOrigin="anonymous"
+                />
                 <div>
                   <span>Số tiền chuyển khoản</span>
                   <strong>{formatCurrency(total)}</strong>

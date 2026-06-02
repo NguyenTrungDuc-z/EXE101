@@ -227,7 +227,7 @@ export async function getUserHome(_request: Request, response: Response) {
     CategoryModel.find().lean(),
     OrderModel.find().lean(),
     UserModel.countDocuments({ role: "employer" }),
-    UserModel.countDocuments({ role: "candidate" })
+    UserModel.countDocuments({ role: "worker" })
   ]);
 
   const categoryCountMap = new Map<string, number>();
@@ -250,7 +250,7 @@ export async function getUserHome(_request: Request, response: Response) {
       totalOpenJobs: jobs.length,
       totalEmployers: employers,
       totalCandidates: candidates,
-      activeOrders: orders.filter((order) => ["pending", "confirmed", "in_service"].includes(order.status)).length
+      activeOrders: orders.filter((order) => ["payment_pending", "PENDING_ASSIGN", "PENDING_ACCEPT", "IN_PROGRESS", "COMPLETED_BY_TECHNICIAN"].includes(order.status)).length
     },
     categories: categories.map((category) => ({
       ...category,
@@ -509,7 +509,7 @@ export async function createUserOrder(request: any, response: Response) {
     jobCode: job.code,
     employerCode: user.code,
     candidateCode: job.employerCode,
-    status: paymentMethod === "wallet" ? "finding_worker" : "payment_pending",
+    status: paymentMethod === "wallet" ? "PENDING_ASSIGN" : "payment_pending",
     scheduledAt: scheduledDate,
     totalAmount: amount,
     frozenBalance: paymentMethod === "wallet" ? amount : 0,
@@ -589,7 +589,7 @@ export async function acceptUserOrder(request: Request, response: Response) {
     return;
   }
 
-  if (order.status !== "finding_worker") {
+  if (order.status !== "PENDING_ASSIGN") {
     response.status(400).json({ message: "Đơn hàng chưa sẵn sàng để thợ nhận." });
     return;
   }
@@ -597,7 +597,7 @@ export async function acceptUserOrder(request: Request, response: Response) {
   if (workerCode) {
     order.candidateCode = workerCode;
   }
-  order.status = "in_service";
+  order.status = "IN_PROGRESS";
   await order.save();
 
   response.json(order);
@@ -612,12 +612,12 @@ export async function requestOrderCompletion(request: Request, response: Respons
     return;
   }
 
-  if (!["confirmed", "in_service"].includes(order.status)) {
+  if (!["COMPLETED_BY_TECHNICIAN", "IN_PROGRESS"].includes(order.status)) {
     response.status(400).json({ message: "Đơn hàng chưa ở trạng thái thực hiện." });
     return;
   }
 
-  order.status = "confirmed";
+  order.status = "COMPLETED_BY_TECHNICIAN";
   await order.save();
 
   response.json(order);
@@ -632,7 +632,7 @@ export async function completeUserOrder(request: Request, response: Response) {
     return;
   }
 
-  if (!["confirmed", "in_service"].includes(order.status)) {
+  if (!["COMPLETED_BY_TECHNICIAN", "IN_PROGRESS"].includes(order.status)) {
     response.status(400).json({ message: "Đơn hàng chưa thể nghiệm thu." });
     return;
   }
@@ -663,7 +663,7 @@ export async function completeUserOrder(request: Request, response: Response) {
     });
   }
 
-  order.status = "completed";
+  order.status = "SUCCESS";
   order.paymentStatus = "paid";
   order.frozenBalance = 0;
   order.workerPayout = workerPayout;

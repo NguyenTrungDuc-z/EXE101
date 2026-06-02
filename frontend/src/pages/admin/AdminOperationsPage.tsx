@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
 import { platformApi } from "../../api/platformApi";
 import { PageIntro, StatusBadge, Surface } from "../../components/ui";
-import type { OperationsResponse } from "../../types/platform";
+import type { OperationsResponse, Worker } from "../../types/platform";
 import { viText } from "../../utils/vietnameseText";
 
 export default function AdminOperationsPage() {
   const [data, setData] = useState<OperationsResponse | null>(null);
+  const [candidates, setCandidates] = useState<Worker[]>([]);
+  const [selectedTechnicians, setSelectedTechnicians] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState("");
 
   const loadOperations = () => {
     platformApi.getAdminOperations().then(setData);
+    platformApi.getAdminWorkers().then(setCandidates);
   };
 
   useEffect(() => {
@@ -38,6 +41,23 @@ export default function AdminOperationsPage() {
     }
   };
 
+  const assignTechnician = async (orderId: string) => {
+    const technicianId = selectedTechnicians[orderId];
+    if (!technicianId) {
+      alert("Vui lòng chọn thợ");
+      return;
+    }
+
+    setFeedback("");
+    try {
+      await platformApi.assignTechnician(orderId, technicianId);
+      setFeedback(`Đã gán thợ cho đơn hàng.`);
+      loadOperations();
+    } catch (reason) {
+      setFeedback((reason as Error).message);
+    }
+  };
+
   return (
     <div className="page-stack">
       <PageIntro
@@ -57,9 +77,39 @@ export default function AdminOperationsPage() {
                 <small>{item.transferContent}</small>
                 <strong>{item.amount.toLocaleString("vi-VN")}đ</strong>
                 <small>{viText(item.address)}</small>
-                <button className="button primary" type="button" onClick={() => approveEscrow(item.code)}>
-                  Duyệt tiền
-                </button>
+                {item.status === "payment_review" ? (
+                  <button className="button primary" type="button" onClick={() => approveEscrow(item.code)}>
+                    Duyệt tiền
+                  </button>
+                ) : item.status === "finding_worker" ? (
+                  <div className="stack-inline" style={{ marginTop: "8px" }}>
+                    <select
+                      className="input"
+                      value={selectedTechnicians[item._id || ""] || ""}
+                      onChange={(e) =>
+                        setSelectedTechnicians({ ...selectedTechnicians, [item._id || ""]: e.target.value })
+                      }
+                    >
+                      <option value="">Chọn thợ...</option>
+                      {candidates
+                        .filter((c) => c.availability === "online" || true) // Fake active for now
+                        .map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.name} ({c.rating}⭐)
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      className="button primary"
+                      type="button"
+                      onClick={() => assignTechnician(item._id || "")}
+                    >
+                      Gán thợ
+                    </button>
+                  </div>
+                ) : (
+                  <StatusBadge value={item.status} />
+                )}
               </article>
             ))}
             {!data?.alerts.escrowOrders.length ? <p>Không có đơn chờ duyệt tiền.</p> : null}

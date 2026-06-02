@@ -30,7 +30,7 @@ export const featureController = {
       return;
     }
 
-    if (order.status !== "completed") {
+    if (order.status !== "SUCCESS") {
       res.status(400).json({ message: "Chỉ được đánh giá khi đã hoàn thành" });
       return;
     }

@@ -11,16 +11,31 @@ const orderSchema = new Schema(
       enum: [
         "payment_pending",
         "payment_review",
-        "finding_worker",
-        "pending",
-        "confirmed",
-        "in_service",
-        "completed",
+        "PENDING_ASSIGN",
+        "PENDING_ACCEPT",
+        "IN_PROGRESS",
+        "COMPLETED_BY_TECHNICIAN",
+        "COMPLETED_PENDING_REVIEW",
+        "SUCCESS",
+        "COMPLETED",
         "cancelled"
       ],
       required: true
     },
     scheduledAt: { type: Date, required: true },
+    technicianId: { type: Schema.Types.ObjectId, ref: "User" },
+    technicianPayout: { type: Number, default: 0 },
+    materialRequests: {
+      type: [
+        {
+          name: { type: String, required: true },
+          quantity: { type: Number, required: true },
+          price: { type: Number, required: true },
+          isApprovedByCustomer: { type: Boolean, default: false }
+        }
+      ],
+      default: []
+    },
     totalAmount: { type: Number, required: true },
     frozenBalance: { type: Number, default: 0 },
     platformFee: { type: Number, default: 0 },
@@ -32,6 +47,8 @@ const orderSchema = new Schema(
     materialStatus: { type: String, enum: ["none", "pending", "confirmed", "rejected"], default: "none" },
     // New fields for Review
     isReviewed: { type: Boolean, default: false },
+    completedAt: { type: Date },
+    isReleased: { type: Boolean, default: false },
     // Commission fields
     commissionRate: { type: Number, default: 0.25 },
     commissionAmount: { type: Number, default: 0 },

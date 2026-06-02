@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { platformApi } from "../../api/platformApi";
 import { PageIntro, StatusBadge, Surface } from "../../components/ui";
-import type { Candidate } from "../../types/platform";
+import type { Worker } from "../../types/platform";
 import { viText } from "../../utils/vietnameseText";
 
 export default function AdminCandidatesPage() {
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [candidates, setCandidates] = useState<Worker[]>([]);
 
   useEffect(() => {
-    platformApi.getAdminCandidates().then(setCandidates);
+    platformApi.getAdminWorkers().then(setCandidates);
   }, []);
 
   return (

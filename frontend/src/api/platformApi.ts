@@ -3,7 +3,7 @@ import type {
   WalletTransaction,
   MaterialList,
   Application,
-  Candidate,
+  Worker,
   CheckoutInfo,
   Employer,
   Job,
@@ -44,8 +44,9 @@ export const platformApi = {
     }),
   getAdminOverview: () => apiFetch<AdminOverview>("/admin/overview"),
   getAdminJobs: () => apiFetch<Job[]>("/admin/jobs"),
+  getAdminOrders: () => apiFetch<Order[]>("/admin/orders"),
   getAdminEmployers: () => apiFetch<Employer[]>("/admin/employers"),
-  getAdminCandidates: () => apiFetch<Candidate[]>("/admin/candidates"),
+  getAdminWorkers: () => apiFetch<Worker[]>("/admin/candidates"),
   getAdminOperations: () => apiFetch<OperationsResponse>("/admin/operations"),
   getAdminUsers: () => apiFetch<any[]>("/admin/users"),
   updateUserRole: (userCode: string, role: string) => 
@@ -62,8 +63,8 @@ export const platformApi = {
       method: "PATCH",
       body: JSON.stringify(payload)
     }),
-  getUserApplications: (candidateCode: string) =>
-    apiFetch<Application[]>(`/user/applications?candidateCode=${candidateCode}`),
+  getUserApplications: (workerCode: string) =>
+    apiFetch<Application[]>(`/user/applications?candidateCode=${workerCode}`),
   getUserOrders: (userCode: string) => apiFetch<Order[]>(`/user/orders?userCode=${userCode}`),
   createUserOrder: (payload: Record<string, unknown>) =>
     apiFetch<{ order: Order; checkout: CheckoutInfo | null }>("/user/orders", {
@@ -106,7 +107,7 @@ export const platformApi = {
       method: "POST",
       body: JSON.stringify(payload)
     }),
-  createMaterialList: (payload: { orderCode: string; candidateCode: string; items: any[]; note: string }) =>
+  createMaterialList: (payload: { orderCode: string; workerCode: string; items: any[]; note: string }) =>
     apiFetch<MaterialList>("/user/material-lists", {
       method: "POST",
       body: JSON.stringify(payload)
@@ -119,7 +120,7 @@ export const platformApi = {
       body: JSON.stringify(payload)
     }),
   approveEscrowPayment: (orderCode: string) =>
-    apiFetch<Order>(`/admin/orders/${orderCode}/approve-escrow`, {
+    apiFetch<Order>(`/admin/escrow/${orderCode}/approve`, {
       method: "POST"
     }),
   approveWithdrawal: (paymentCode: string) =>
@@ -143,7 +144,7 @@ export const platformApi = {
     }),
   getPendingOrders: () => apiFetch<Order[]>("/user/orders/pending"),
   getOrderDetail: (orderCode: string) => apiFetch<Order>(`/user/orders/detail/${orderCode}`),
-  acceptOrder: (payload: { orderId: string; candidateCode: string }) =>
+  acceptOrder: (payload: { orderId: string; workerCode: string }) =>
     apiFetch<any>("/user/orders/accept", {
       method: "POST",
       body: JSON.stringify(payload)
@@ -170,5 +171,35 @@ export const platformApi = {
   rejectJob: (jobCode: string) =>
     apiFetch<Job>(`/admin/jobs/${jobCode}/reject`, {
       method: "POST"
+    }),
+  getAvailableTechnicians: () => apiFetch<any[]>("/admin/technicians/available"),
+  assignTechnician: (orderCode: string, technicianCode: string) =>
+    apiFetch<any>(`/admin/orders/${orderCode}/assign`, {
+      method: "PUT",
+      body: JSON.stringify({ technicianCode })
+    }),
+  respondToOrder: (orderCode: string, response: "accepted" | "rejected") =>
+    apiFetch<any>(`/user/orders/${orderCode}/response`, {
+      method: "POST",
+      body: JSON.stringify({ response })
+    }),
+  completeOrder: (orderCode: string) =>
+    apiFetch<any>(`/user/orders/${orderCode}/complete`, {
+      method: "POST"
+    }),
+  reviewOrder: (orderCode: string, payload: { rating: number; comment: string }) =>
+    apiFetch<any>(`/user/orders/${orderCode}/review`, {
+      method: "POST",
+      body: JSON.stringify({ orderCode, ...payload })
+    }),
+  addMaterialRequest: (orderCode: string, name: string, quantity: number, price: number) =>
+    apiFetch<any>(`/user/orders/${orderCode}/material-request`, {
+      method: "POST",
+      body: JSON.stringify({ orderId: orderCode, name, quantity, price })
+    }),
+  approveMaterialRequest: (orderCode: string, materialIndex: number) =>
+    apiFetch<any>(`/user/orders/${orderCode}/material-request/approve`, {
+      method: "PUT",
+      body: JSON.stringify({ orderId: orderCode, materialIndex })
     })
 };

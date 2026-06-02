@@ -25,7 +25,12 @@ import {
   approveInvoice,
   completeAndPayOrder,
   getPendingOrders,
-  getOrderDetail
+  getOrderDetail,
+  workerResponse,
+  completeOrder,
+  reviewAndReleaseOrder,
+  addMaterialRequest,
+  approveMaterialRequest
 } from "../../controllers/user/orderController.js";
 
 export const userRouter = Router();
@@ -41,25 +46,31 @@ userRouter.get("/orders", asyncHandler(listUserOrders));
 userRouter.patch("/profile", asyncHandler(updateUserProfile));
 
 userRouter.post("/jobs", authorize("employer"), asyncHandler(createUserJob));
-userRouter.post("/applications", authorize("candidate"), asyncHandler(createUserApplication));
+userRouter.post("/applications", authorize("worker"), asyncHandler(createUserApplication));
 userRouter.post("/orders", authorize("employer"), asyncHandler(createUserOrder));
 userRouter.post("/orders/:orderCode/transferred", authorize("employer"), asyncHandler(markOrderTransferred));
-userRouter.post("/orders/:orderCode/accept", authorize("candidate"), asyncHandler(acceptUserOrder));
-userRouter.post("/orders/:orderCode/request-completion", authorize("candidate"), asyncHandler(requestOrderCompletion));
-userRouter.post("/orders/:orderCode/complete", authorize("employer"), asyncHandler(completeUserOrder));
+userRouter.post("/orders/:orderCode/accept", authorize("worker"), asyncHandler(acceptUserOrder));
+userRouter.post("/orders/:orderCode/request-completion", authorize("worker"), asyncHandler(requestOrderCompletion));
 userRouter.post("/wallet/transactions", asyncHandler(createWalletTransaction));
 
 // Feature routes
 userRouter.post("/reviews", authorize("employer"), asyncHandler(featureController.createReview));
-userRouter.post("/material-lists", authorize("candidate"), asyncHandler(featureController.createMaterialList));
+userRouter.post("/material-lists", authorize("worker"), asyncHandler(featureController.createMaterialList));
 userRouter.get("/material-lists/:orderCode", asyncHandler(featureController.getMaterialList));
 userRouter.post("/material-lists/confirm", authorize("employer"), asyncHandler(featureController.confirmMaterialList));
 userRouter.get("/wallet/history", asyncHandler(featureController.getWalletTransactions));
 
 // Order management routes
-userRouter.post("/orders/accept", authorize("candidate"), asyncHandler(acceptOrder));
-userRouter.post("/orders/invoice", authorize("candidate"), asyncHandler(createInvoice));
+userRouter.post("/orders/accept", authorize("worker"), asyncHandler(acceptOrder));
+userRouter.post("/orders/invoice", authorize("worker"), asyncHandler(createInvoice));
 userRouter.post("/orders/approve-invoice", authorize("employer"), asyncHandler(approveInvoice));
 userRouter.post("/orders/complete-and-pay", authorize("employer"), asyncHandler(completeAndPayOrder));
-userRouter.get("/orders/pending", authorize("candidate"), asyncHandler(getPendingOrders));
+userRouter.get("/orders/pending", authorize("worker"), asyncHandler(getPendingOrders));
 userRouter.get("/orders/detail/:orderCode", asyncHandler(getOrderDetail));
+userRouter.post("/orders/:orderCode/response", authorize("worker"), asyncHandler(workerResponse));
+userRouter.post("/orders/:orderCode/complete", authorize("worker"), asyncHandler(completeOrder));
+userRouter.post("/orders/:orderCode/review", authorize("employer"), asyncHandler(reviewAndReleaseOrder));
+
+// Material Request routes (Phase 4)
+userRouter.post("/orders/:orderCode/material-request", authorize("worker"), asyncHandler(addMaterialRequest));
+userRouter.put("/orders/:orderCode/material-request/approve", authorize("employer"), asyncHandler(approveMaterialRequest));

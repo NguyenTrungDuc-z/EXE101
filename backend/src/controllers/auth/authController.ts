@@ -92,13 +92,13 @@ export async function loginWithPhone(request: Request, response: Response) {
   let user = await UserModel.findOne({ phone });
 
   if (!user) {
-    const code = generateCode("USR-CAN");
+    const code = generateCode("USR-EMP");
     const newUser = await UserModel.create({
       code,
       name: `Khách hàng ${phone.slice(-4)}`,
       email: `${code.toLowerCase()}@homeswift.local`,
       phone,
-      role: "candidate",
+      role: "employer",
       status: "active",
       city: "Ho Chi Minh City",
       avatar: `https://i.pravatar.cc/120?u=${code}`,
@@ -215,13 +215,13 @@ export async function verifyRegisterOtp(request: Request, response: Response) {
      return;
    }
 
-   const code = generateCode("USR-CAN");
+   const code = generateCode("USR-EMP");
    const newUser = await UserModel.create({
      code,
      name: pending.name,
      email: pending.email,
      phone,
-     role: "candidate",
+     role: "employer",
      status: "active",
      city: pending.city,
      avatar: `https://i.pravatar.cc/120?u=${code}`,
@@ -268,7 +268,7 @@ export async function loginWithGoogle(request: Request, response: Response) {
       let user = await UserModel.findOne({ email }).lean();
 
       if (!user) {
-        const code = generateCode("USR-CAN");
+        const code = generateCode("USR-EMP");
         const googleIdStr = String(googleId);
         try {
           const newUser = await UserModel.create({
@@ -276,7 +276,7 @@ export async function loginWithGoogle(request: Request, response: Response) {
             name: name || `Google User ${googleIdStr.slice(-4)}`,
             email,
             phone: `google-${googleIdStr}`,
-            role: "candidate",
+            role: "employer",
             status: "active",
             city: "Ho Chi Minh City",
             avatar: `https://i.pravatar.cc/120?u=${code}`,
@@ -327,13 +327,13 @@ export async function loginWithFacebook(request: Request, response: Response) {
     let user = await UserModel.findOne({ email: fbEmail }).lean();
 
     if (!user) {
-      const code = generateCode("USR-CAN");
+      const code = generateCode("USR-EMP");
       const newUser = await UserModel.create({
         code,
         name: name || `Facebook User ${userID.slice(-4)}`,
         email: fbEmail,
         phone: `facebook-${userID}`,
-        role: "candidate",
+        role: "employer",
         status: "active",
         city: "Ho Chi Minh City",
         avatar: `https://i.pravatar.cc/120?u=${code}`,
