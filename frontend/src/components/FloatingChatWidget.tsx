@@ -12,7 +12,7 @@ const supportedServices = [
 const starterMessages = [
   {
     role: "assistant" as const,
-    content: "Xin chào! Tôi là HomeSwift AI. Mình hỗ trợ tư vấn về vệ sinh nhà, vệ sinh máy lạnh và sửa chữa cơ bản. Bạn cần giúp gì hôm nay?"
+    content: "Xin chào! Tôi là ViecNhanh AI. Mình hỗ trợ tư vấn về vệ sinh nhà, vệ sinh máy lạnh và sửa chữa cơ bản. Bạn cần giúp gì hôm nay?"
   }
 ];
 
@@ -110,7 +110,7 @@ export default function FloatingChatWidget() {
                 />
               </div>
               <div>
-                <p className="help-chat-title">HomeSwift AI</p>
+                <p className="help-chat-title">ViecNhanh AI</p>
                 <p className="help-chat-subtitle">Tư vấn nhanh, đặt lịch và hỗ trợ dịch vụ</p>
               </div>
             </div>

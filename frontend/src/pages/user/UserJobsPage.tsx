@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Search, SlidersHorizontal, DollarSign, Star, Tag, Clock,
-  ChevronLeft, ChevronRight, MapPin, ArrowRight, ShieldCheck,
-  Phone, MessageCircle, ChevronDown, Minus, Plus, CalendarCheck,
-  Users, Sparkles, CheckCircle2, HelpCircle, Quote
+  ArrowRight, CalendarCheck, ChevronDown, ChevronLeft, ChevronRight, Clock,
+  DollarSign, HelpCircle, MapPin, Minus, Phone, Plus, Quote,
+  Search, ShieldCheck, SlidersHorizontal, Sparkles, Star, Tag, Users
 } from "lucide-react";
 import { platformApi } from "../../api/platformApi";
 import type { Job, JobDetail, Order, UserProfile } from "../../types/platform";
@@ -58,7 +57,7 @@ export default function UserJobsPage() {
     if (userProfile?.role === "candidate") {
       platformApi.getPendingOrders()
         .then(setPendingOrders)
-        .catch(err => setFeedback(err.message));
+        .catch((err) => setFeedback(err.message));
     }
   }, [userProfile]);
 
@@ -88,7 +87,6 @@ export default function UserJobsPage() {
       })
       .catch((reason: Error) => setFeedback(reason.message));
   }, [fourStarOnly, maxBudget, maxBudgetInput, minBudget, minBudgetInput, search, selectedCategories]);
-
 
   useEffect(() => {
     if (jobCodeParam) {
@@ -123,6 +121,7 @@ export default function UserJobsPage() {
   const pageJobs = displayJobs.slice((page - 1) * 10, page * 10);
   const primaryJobs = pageJobs.slice(0, 3);
   const recommendedJobs = (pageJobs.length > 3 ? pageJobs.slice(3, 6) : jobs.filter((job) => !primaryJobs.some((item) => item.code === job.code))).slice(0, 3);
+  const activeFilterCount = selectedCategories.length + (fourStarOnly ? 1 : 0) + (Number(minBudgetInput) > 0 || maxBudgetInput !== "5000000" ? 1 : 0);
 
   useEffect(() => {
     setPage(1);
@@ -193,8 +192,9 @@ export default function UserJobsPage() {
 
     return (
       <div className="service-detail-page">
-        <section className="detail-hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(8, 20, 34, 0.62), rgba(8, 20, 34, 0.22)), url(${selectedJob.coverImage})` }}>
+        <section className="detail-hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(8, 20, 34, 0.68), rgba(8, 20, 34, 0.24)), url(${selectedJob.coverImage})` }}>
           <div>
+            <span className="detail-kicker">{viText(selectedJob.categoryName)}</span>
             <h1>{viText(selectedJob.title)}</h1>
             <p>
               <Star size={18} fill="#f4c430" stroke="#f4c430" style={{ verticalAlign: "middle", marginRight: 4 }} />
@@ -345,7 +345,9 @@ export default function UserJobsPage() {
   return (
     <div className="services-page">
       <section className="services-hero">
-        <h1>Kết quả tìm kiếm phù hợp</h1>
+        <span className="eyebrow">Tìm dịch vụ phù hợp</span>
+        <h1>Dịch vụ tại nhà được chọn lọc theo nhu cầu của bạn.</h1>
+        <p>So sánh giá, đánh giá và lịch phục vụ để đặt dịch vụ nhanh hơn.</p>
         <form
           className="services-search"
           onSubmit={(event) => {
@@ -383,20 +385,28 @@ export default function UserJobsPage() {
             Tìm kiếm
           </button>
         </form>
+        <div className="services-hero-stats" aria-label="Tổng quan tìm kiếm">
+          <span><strong>{jobs.length}</strong> dịch vụ</span>
+          <span><strong>{categories.length}</strong> nhóm ngành</span>
+          <span><strong>{activeFilterCount}</strong> bộ lọc đang dùng</span>
+        </div>
       </section>
 
       {feedback ? <p className="feedback">{feedback}</p> : null}
 
       <section className="services-results">
         <aside className="services-filter">
-          <h2>
-            <SlidersHorizontal size={20} style={{ marginRight: 8, verticalAlign: "middle" }} />
-            Bộ lọc
-          </h2>
+          <div className="services-filter-head">
+            <h2>
+              <SlidersHorizontal size={20} />
+              Bộ lọc
+            </h2>
+            <span>{activeFilterCount} đang chọn</span>
+          </div>
 
           <div className="filter-block">
             <h3>
-              <DollarSign size={16} style={{ marginRight: 6, verticalAlign: "middle", color: "#1977d2" }} />
+              <DollarSign size={16} />
               Khoảng giá
             </h3>
             <div className="range-line">
@@ -426,7 +436,7 @@ export default function UserJobsPage() {
 
           <div className="filter-block">
             <h3>
-              <Star size={16} style={{ marginRight: 6, verticalAlign: "middle", color: "#f4c430" }} />
+              <Star size={16} />
               Đánh giá
             </h3>
             <label>
@@ -464,7 +474,7 @@ export default function UserJobsPage() {
 
           <div className="filter-block">
             <h3>
-              <Tag size={16} style={{ marginRight: 6, verticalAlign: "middle", color: "#1977d2" }} />
+              <Tag size={16} />
               Loại dịch vụ
             </h3>
             {categories.map((item) => (
@@ -481,31 +491,35 @@ export default function UserJobsPage() {
 
           <div className="filter-block">
             <h3>
-              <Clock size={16} style={{ marginRight: 6, verticalAlign: "middle", color: "#1977d2" }} />
+              <Clock size={16} />
               Thời gian phục vụ
             </h3>
-            <label><input type="checkbox" defaultChecked /> 8:00 – 12:00</label>
-            <label><input type="checkbox" defaultChecked /> 12:00 – 18:00</label>
-            <label><input type="checkbox" defaultChecked /> 18:00 – 21:00</label>
+            <label><input type="checkbox" defaultChecked /> 8:00 - 12:00</label>
+            <label><input type="checkbox" defaultChecked /> 12:00 - 18:00</label>
+            <label><input type="checkbox" defaultChecked /> 18:00 - 21:00</label>
           </div>
         </aside>
 
         <div className="services-content">
           {userProfile?.role === "candidate" && (
             <div className="pending-orders-section">
-              <h2 className="section-title">Công việc đang chờ thợ</h2>
+              <div className="services-section-head">
+                <h2>Công việc đang chờ thợ</h2>
+                <span className="services-count-badge">{pendingOrders.length} đơn</span>
+              </div>
               <div className="service-product-grid">
                 {pendingOrders.map((order) => (
                   <article key={order.code} className="service-product-card">
                     <div className="product-image-wrapper">
-                      <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=800" alt="Job" />
+                      <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=800" alt="Công việc" />
                     </div>
                     <div className="service-product-body">
+                      <span className="product-chip">Đơn đang mở</span>
                       <h3>{order.jobTitle || "Dịch vụ tận nơi"}</h3>
                       <div className="product-meta">
                         <span className="product-rating">
                           <Clock size={14} />
-                          {new Date(order.scheduledAt).toLocaleString('vi-VN')}
+                          {new Date(order.scheduledAt).toLocaleString("vi-VN")}
                         </span>
                       </div>
                       <strong className="product-price">
@@ -514,8 +528,8 @@ export default function UserJobsPage() {
                       <p className="location-text">
                         <MapPin size={14} /> {order.address}
                       </p>
-                      <button 
-                        className="button primary product-cta" 
+                      <button
+                        className="button primary product-cta"
                         type="button"
                         onClick={() => navigate(`/orders/${order.code}`)}
                       >
@@ -538,8 +552,13 @@ export default function UserJobsPage() {
 
           <div className="services-result-head">
             <div>
+              <span className="eyebrow">{userProfile?.role === "candidate" ? "Kho dịch vụ" : "Kết quả phù hợp"}</span>
               <h1>{userProfile?.role === "candidate" ? "Tất cả dịch vụ hệ thống" : "Dịch vụ liên quan"}</h1>
               <p>{displayJobs.length} kết quả cho <strong>{resultLabel}</strong></p>
+            </div>
+            <div className="services-active-chips">
+              {selectedCategories.map((item) => <span key={item}>{viText(item)}</span>)}
+              {fourStarOnly ? <span>4 sao trở lên</span> : null}
             </div>
           </div>
 
@@ -556,7 +575,7 @@ export default function UserJobsPage() {
 
           <div className="services-section-head">
             <h2>
-              <Sparkles size={20} style={{ marginRight: 8, verticalAlign: "middle", color: "#1977d2" }} />
+              <Sparkles size={20} />
               Gợi ý cho bạn
             </h2>
             <div className="services-mini-arrows">
@@ -606,6 +625,7 @@ function ServiceProductCard({ job, onOpen, compact = false }: { job: Job; onOpen
     <article className={`service-product-card ${compact ? "compact" : ""}`} onClick={() => onOpen(job.code)}>
       <div className="product-image-wrapper">
         <img src={job.coverImage} alt={viText(job.title)} />
+        <span className="product-image-badge">{viText(job.categoryName ?? "Dịch vụ")}</span>
       </div>
       <div className="service-product-body">
         <h3>{viText(job.title)}</h3>
@@ -624,7 +644,7 @@ function ServiceProductCard({ job, onOpen, compact = false }: { job: Job; onOpen
             {job.budgetMin.toLocaleString()}đ
           </strong>
         )}
-        <button className="button primary product-cta" type="button" onClick={(e) => { e.stopPropagation(); onOpen(job.code); }}>
+        <button className="button primary product-cta" type="button" onClick={(event) => { event.stopPropagation(); onOpen(job.code); }}>
           Xem chi tiết
           <ArrowRight size={15} />
         </button>
@@ -750,7 +770,7 @@ function HomeFooter() {
           <Phone size={14} style={{ verticalAlign: "middle", marginRight: 6 }} />
           0833 256 780
         </p>
-        <p>homeswift.com</p>
+        <p>ViecNhanh.com</p>
       </div>
       <div>
         <h3>Mạng xã hội</h3>

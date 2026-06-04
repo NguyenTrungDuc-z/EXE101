@@ -11,7 +11,7 @@ const BANK_INFO = {
   bankBin: "970436",
   bankName: "VCB",
   accountNumber: "0123456789",
-  accountName: "HOMESWIFT"
+  accountName: "ViecNhanh"
 };
 
 const addressTree = {
@@ -339,7 +339,7 @@ export default function EmployerPostJobPage() {
               <p>Chủ tài khoản: <b>{checkout.accountName}</b></p>
               <p>Nội dung: <b>{checkout.transferContent}</b></p>
               <div className="escrow-note">
-                HomeSwift sẽ giữ an toàn khoản tiền này. Tiền chỉ được chuyển cho thợ sau khi bạn nghiệm thu và hài lòng.
+                ViecNhanh sẽ giữ an toàn khoản tiền này. Tiền chỉ được chuyển cho thợ sau khi bạn nghiệm thu và hài lòng.
               </div>
               <button className="button primary booking-submit" type="button" onClick={confirmTransferred}>
                 Tôi đã chuyển khoản
@@ -556,7 +556,7 @@ export default function EmployerPostJobPage() {
                   checked={paymentMethod === "wallet"}
                   onChange={() => setPaymentMethod("wallet")}
                 />
-                Ví HomeSwift ({formatCurrency(profile?.walletBalance ?? 0)})
+                Ví ViecNhanh ({formatCurrency(profile?.walletBalance ?? 0)})
               </label>
             </fieldset>
 
@@ -587,7 +587,7 @@ export default function EmployerPostJobPage() {
         <div>
           <h3>Liên hệ</h3>
           <p>0833 256 780</p>
-          <p>homeswift.com</p>
+          <p>ViecNhanh.com</p>
         </div>
         <div>
           <h3>Mạng xã hội</h3>

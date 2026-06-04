@@ -51,7 +51,7 @@ export default function UserLayout() {
       <header className="topbar">
         <NavLink to="/" end className="brand-mark">
           <ServiceIcons.home size={28} className="brand-icon-svg" />
-          <strong>Home<span>Swift</span></strong>
+          <strong>Viec<span>Nhanh</span></strong>
         </NavLink>
         <nav className="nav-stack">
           {links.map((link, index) => {

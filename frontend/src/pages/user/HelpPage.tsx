@@ -13,7 +13,7 @@ const faqs = [
   },
   {
     question: "Tôi thanh toán dịch vụ như thế nào?",
-    answer: "HomeSwift hỗ trợ thanh toán bằng ví điện tử, chuyển khoản hoặc tiền mặt sau khi hoàn tất dịch vụ."
+    answer: "ViecNhanh hỗ trợ thanh toán bằng ví điện tử, chuyển khoản hoặc tiền mặt sau khi hoàn tất dịch vụ."
   },
   {
     question: "Tôi phải làm gì nếu không hài lòng với công việc?",

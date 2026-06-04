@@ -54,10 +54,10 @@ export default function UserHomePage() {
     ? testimonials
     : [
         {
-          author: "HomeSwift",
+          author: "ViecNhanh",
           rating: 5,
           comment:
-            "Thợ tận tâm, báo giá rõ ràng và hoàn thành đúng hẹn. Tôi rất yên tâm khi đặt dịch vụ tại HomeSwift.",
+            "Thợ tận tâm, báo giá rõ ràng và hoàn thành đúng hẹn. Tôi rất yên tâm khi đặt dịch vụ tại ViecNhanh.",
           image:
             "https://images.unsplash.com/photo-1506869640319-fe1a24fd76dc?auto=format&fit=crop&w=700&q=80",
           jobCode: "",
@@ -244,7 +244,7 @@ export default function UserHomePage() {
           </p>
           <p>
             <Globe size={14} style={{ verticalAlign: "middle", marginRight: 6 }} />
-            homeswift.com
+            ViecNhanh.com
           </p>
         </div>
         {/* <div>

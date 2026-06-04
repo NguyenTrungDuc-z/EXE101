@@ -109,7 +109,7 @@ export default function WalletPage() {
         
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32, position: "relative" }}>
           <div>
-            <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 4, letterSpacing: 1 }}>HOMESWIFT WALLET</div>
+            <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 4, letterSpacing: 1 }}>ViecNhanh WALLET</div>
             <div style={{ fontSize: 14, opacity: 0.8 }}>{user.name || "User"}</div>
           </div>
           <div style={{ display: "flex", gap: 4 }}>

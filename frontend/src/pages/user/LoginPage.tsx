@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { CheckCircle2, LockKeyhole, MapPin, ShieldCheck, Smartphone, Sparkles, UserPlus } from "lucide-react";
 import { platformApi } from "../../api/platformApi";
 import FacebookLogin from "../../auth/FacebookLogin";
 import GoogleLogin from "../../auth/GoogleLogin";
@@ -9,6 +10,12 @@ const AUTH_STORAGE_KEY = "homeswift_user";
 const FB_APP_ID = "1969315983727979";
 const GOOGLE_CLIENT_ID = "221668802735-ps1j4hoftkj11obo4g4d0eod36ljc39h.apps.googleusercontent.com";
 const cityOptions = ["Hà Nội", "TP. Hồ Chí Minh", "Đà Nẵng", "Hải Phòng", "Cần Thơ", "Bình Dương", "Đồng Nai", "Khánh Hòa"];
+
+const loginHighlights = [
+  "Đặt lịch và theo dõi đơn dịch vụ trong một nơi",
+  "Thông tin tài khoản được bảo vệ bằng xác thực OTP",
+  "Dễ dàng quản lý lịch sử dịch vụ và hỗ trợ"
+];
 
 function normalizePhone(value: string) {
   return value.replace(/\D/g, "");
@@ -63,49 +70,45 @@ export default function LoginPage() {
         : "Email phải là gmail.com hoặc email công ty/trường học hợp lệ.",
     city: registerCity ? "" : "Vui lòng chọn thành phố/khu vực."
   };
-   const canSubmitRegister =
-     !registerFieldErrors.name && !registerFieldErrors.phone && !registerFieldErrors.email && !registerFieldErrors.city;
+  const canSubmitRegister =
+    !registerFieldErrors.name && !registerFieldErrors.phone && !registerFieldErrors.email && !registerFieldErrors.city;
 
-   // Initialize Facebook Login once on mount
-   useEffect(() => {
-     const fbLoginInstance = new FacebookLogin(FB_APP_ID);
-     setFbLogin(fbLoginInstance);
-   }, []);
+  useEffect(() => {
+    const fbLoginInstance = new FacebookLogin(FB_APP_ID);
+    setFbLogin(fbLoginInstance);
+  }, []);
 
-   // Initialize Google Login once on mount (only once, never re-run)
-   useEffect(() => {
-     const googleLoginInstance = new GoogleLogin(GOOGLE_CLIENT_ID);
-     const redirectPath = searchParams.get("redirect") || "/user/workspace";
+  useEffect(() => {
+    const googleLoginInstance = new GoogleLogin(GOOGLE_CLIENT_ID);
+    const redirectPath = searchParams.get("redirect") || "/user/workspace";
 
-     googleLoginInstance.setOnLoginSuccess(async (authResponse) => {
-       try {
-         const result = await platformApi.loginWithGoogle({ credential: authResponse.credential });
-         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...result.user, token: result.token }));
-         window.dispatchEvent(new Event("homeswift-auth"));
-         setFeedback("Đăng nhập Google thành công!");
-         setTimeout(() => navigate(redirectPath), 500);
-       } catch (error) {
-         setFeedback((error as Error).message);
-       }
-     });
+    googleLoginInstance.setOnLoginSuccess(async (authResponse) => {
+      try {
+        const result = await platformApi.loginWithGoogle({ credential: authResponse.credential });
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...result.user, token: result.token }));
+        window.dispatchEvent(new Event("homeswift-auth"));
+        setFeedback("Đăng nhập Google thành công!");
+        setTimeout(() => navigate(redirectPath), 500);
+      } catch (error) {
+        setFeedback((error as Error).message);
+      }
+    });
 
-     googleLoginInstance.setOnLoginError((error) => {
-       setFeedback(error.message);
-     });
+    googleLoginInstance.setOnLoginError((error) => {
+      setFeedback(error.message);
+    });
 
-     // Render Google button when component mounts
-     setTimeout(() => {
-       googleLoginInstance.renderButton("google-signin-button");
-     }, 500);
-   }, []);
+    setTimeout(() => {
+      googleLoginInstance.renderButton("google-signin-button");
+    }, 500);
+  }, []);
 
-   // Handle mode changes (show/hide Google button)
-   useEffect(() => {
-     const googleButton = document.getElementById("google-signin-button");
-     if (googleButton) {
-       googleButton.style.display = mode === "login" ? "flex" : "none";
-     }
-   }, [mode]);
+  useEffect(() => {
+    const googleButton = document.getElementById("google-signin-button");
+    if (googleButton) {
+      googleButton.style.display = mode === "login" ? "flex" : "none";
+    }
+  }, [mode]);
 
   const handleFacebookLogin = async () => {
     if (!fbLogin) {
@@ -115,16 +118,16 @@ export default function LoginPage() {
     setFeedback("");
     setIsSubmitting(true);
     try {
-     const authResponse = await fbLogin.login();
-     const result = await platformApi.loginWithFacebook({
-       accessToken: authResponse.accessToken,
-       userID: authResponse.userID
-     });
-     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...result.user, token: result.token }));
-     window.dispatchEvent(new Event("homeswift-auth"));
-     const redirectPath = searchParams.get("redirect") || "/user/workspace";
-     setFeedback("Đăng nhập Facebook thành công!");
-     setTimeout(() => navigate(redirectPath), 500);
+      const authResponse = await fbLogin.login();
+      const result = await platformApi.loginWithFacebook({
+        accessToken: authResponse.accessToken,
+        userID: authResponse.userID
+      });
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...result.user, token: result.token }));
+      window.dispatchEvent(new Event("homeswift-auth"));
+      const redirectPath = searchParams.get("redirect") || "/user/workspace";
+      setFeedback("Đăng nhập Facebook thành công!");
+      setTimeout(() => navigate(redirectPath), 500);
     } catch (error) {
       setFeedback((error as Error).message);
     } finally {
@@ -213,150 +216,182 @@ export default function LoginPage() {
 
   return (
     <section className="login-shell">
-      <div className="login-card">
-        <Link to="/" className="login-logo">
-          <span className="brand-icon" aria-hidden="true" />
-          <strong>Home<span>Swift</span></strong>
-        </Link>
+      <div className="login-layout">
+        <aside className="login-visual-panel">
+          <span className="eyebrow">Tài khoản ViecNhanh</span>
+          <h1>{mode === "login" ? "Chào mừng bạn quay lại." : "Bắt đầu quản lý dịch vụ dễ dàng hơn."}</h1>
+          <p>
+            Đăng nhập để đặt lịch, theo dõi tiến độ và nhận hỗ trợ nhanh cho mọi nhu cầu dịch vụ tại nhà.
+          </p>
+          <div className="login-highlight-list">
+            {loginHighlights.map((item) => (
+              <span key={item}>
+                <CheckCircle2 size={18} />
+                {item}
+              </span>
+            ))}
+          </div>
+          <div className="login-trust-strip" aria-label="Cam kết tài khoản">
+            <span><ShieldCheck size={18} /> Bảo mật</span>
+            <span><Smartphone size={18} /> OTP nhanh</span>
+            <span><MapPin size={18} /> Khu vực rõ ràng</span>
+          </div>
+        </aside>
 
-        <div className="auth-mode-tabs" role="tablist" aria-label="Chọn đăng nhập hoặc đăng ký">
-          <button
-            className={mode === "login" ? "active" : ""}
-            type="button"
-            role="tab"
-            aria-selected={mode === "login"}
-            onClick={() => {
-              setMode("login");
-              setFeedback("");
-            }}
-          >
-            Đăng nhập
-          </button>
-          <button
-            className={mode === "register" ? "active" : ""}
-            type="button"
-            role="tab"
-            aria-selected={mode === "register"}
-            onClick={() => {
-              setMode("register");
-              setFeedback("");
-            }}
-          >
-            Đăng ký
-          </button>
-        </div>
+        <div className="login-card">
+          <Link to="/" className="login-logo">
+            <span className="brand-icon" aria-hidden="true" />
+            <strong>Viec<span>Nhanh</span></strong>
+          </Link>
 
-        {mode === "login" ? (
-          <>
-            <div
-              id="google-signin-button"
-              style={{ width: "100%", minHeight: "40px", display: "flex", justifyContent: "center" }}
-            />
+          <div className="login-card-head">
+            <span className="login-card-icon">{mode === "login" ? <LockKeyhole size={22} /> : <UserPlus size={22} />}</span>
+            <div>
+              <h2>{mode === "login" ? "Đăng nhập tài khoản" : "Tạo tài khoản mới"}</h2>
+              <p>{mode === "login" ? "Nhập số điện thoại hoặc dùng tài khoản xã hội." : "Hoàn tất thông tin để nhận mã xác thực OTP."}</p>
+            </div>
+          </div>
 
+          <div className="auth-mode-tabs" role="tablist" aria-label="Chọn đăng nhập hoặc đăng ký">
             <button
-              className="social-button facebook-button"
+              className={mode === "login" ? "active" : ""}
               type="button"
-              onClick={handleFacebookLogin}
-              disabled={isSubmitting}
+              role="tab"
+              aria-selected={mode === "login"}
+              onClick={() => {
+                setMode("login");
+                setFeedback("");
+              }}
             >
-              <span aria-hidden="true">f</span>
-              Tiếp tục với Facebook
+              Đăng nhập
             </button>
+            <button
+              className={mode === "register" ? "active" : ""}
+              type="button"
+              role="tab"
+              aria-selected={mode === "register"}
+              onClick={() => {
+                setMode("register");
+                setFeedback("");
+              }}
+            >
+              Đăng ký
+            </button>
+          </div>
 
-            <div className="login-divider">hoặc dùng số điện thoại</div>
+          {mode === "login" ? (
+            <>
+              <div
+                id="google-signin-button"
+                style={{ width: "100%", minHeight: "40px", display: "flex", justifyContent: "center" }}
+              />
 
-            <form onSubmit={submitLogin} className="login-form">
-              <label className="phone-field">
-                <span className="country-code">+84</span>
+              <button
+                className="social-button facebook-button"
+                type="button"
+                onClick={handleFacebookLogin}
+                disabled={isSubmitting}
+              >
+                <span aria-hidden="true">f</span>
+                Tiếp tục với Facebook
+              </button>
+
+              <div className="login-divider">hoặc dùng số điện thoại</div>
+
+              <form onSubmit={submitLogin} className="login-form">
+                <label className="phone-field">
+                  <span className="country-code">+84</span>
+                  <input
+                    value={identifier}
+                    onChange={(event) => setIdentifier(event.target.value)}
+                    placeholder="Nhập số điện thoại"
+                    autoComplete="username"
+                  />
+                </label>
+
+                <button className="button primary login-submit" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Đang gửi..." : "Gửi mã OTP"}
+                </button>
+              </form>
+            </>
+          ) : (
+            <form onSubmit={submitRegister} className="login-form register-form">
+              <label>
+                Họ và tên
                 <input
-                  value={identifier}
-                  onChange={(event) => setIdentifier(event.target.value)}
-                  placeholder="Nhập số điện thoại"
-                  autoComplete="username"
+                  value={registerName}
+                  onChange={(event) => {
+                    setRegisterName(event.target.value);
+                    setFeedback("");
+                  }}
+                  placeholder="Nguyễn Văn A"
+                  autoComplete="name"
+                  aria-invalid={Boolean(registerFieldErrors.name)}
                 />
+                {registerFieldErrors.name ? <small className="field-error">{registerFieldErrors.name}</small> : null}
               </label>
-
-              <button className="button primary login-submit" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Đang gửi..." : "Gửi mã OTP"}
+              <label>
+                Số điện thoại
+                <input
+                  value={registerPhone}
+                  onChange={(event) => {
+                    setRegisterPhone(normalizePhone(event.target.value).slice(0, 10));
+                    setFeedback("");
+                  }}
+                  placeholder="0901 234 567"
+                  autoComplete="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  aria-invalid={Boolean(registerFieldErrors.phone)}
+                />
+                {registerFieldErrors.phone ? <small className="field-error">{registerFieldErrors.phone}</small> : null}
+              </label>
+              <label>
+                Email
+                <input
+                  value={registerEmail}
+                  onChange={(event) => {
+                    setRegisterEmail(event.target.value);
+                    setFeedback("");
+                  }}
+                  placeholder="email@ViecNhanh.vn"
+                  autoComplete="email"
+                  aria-invalid={Boolean(registerFieldErrors.email)}
+                />
+                {registerFieldErrors.email ? <small className="field-error">{registerFieldErrors.email}</small> : null}
+              </label>
+              <label>
+                Khu vực
+                <select
+                  value={registerCity}
+                  onChange={(event) => {
+                    setRegisterCity(event.target.value);
+                    setFeedback("");
+                  }}
+                  required
+                  aria-invalid={Boolean(registerFieldErrors.city)}
+                >
+                  <option value="" disabled>Chọn thành phố/khu vực</option>
+                  {cityOptions.map((city) => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+                {registerFieldErrors.city ? <small className="field-error">{registerFieldErrors.city}</small> : null}
+              </label>
+              <button className="button primary login-submit" type="submit" disabled={isSubmitting || !canSubmitRegister}>
+                {isSubmitting ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
               </button>
             </form>
-          </>
-        ) : (
-          <form onSubmit={submitRegister} className="login-form register-form">
-            <label>
-              Họ và tên
-              <input
-                value={registerName}
-                onChange={(event) => {
-                  setRegisterName(event.target.value);
-                  setFeedback("");
-                }}
-                placeholder="Nguyễn Văn A"
-                autoComplete="name"
-                aria-invalid={Boolean(registerFieldErrors.name)}
-              />
-              {registerFieldErrors.name ? <small className="field-error">{registerFieldErrors.name}</small> : null}
-            </label>
-            <label>
-              Số điện thoại
-              <input
-                value={registerPhone}
-                onChange={(event) => {
-                  setRegisterPhone(normalizePhone(event.target.value).slice(0, 10));
-                  setFeedback("");
-                }}
-                placeholder="0901 234 567"
-                autoComplete="tel"
-                inputMode="numeric"
-                maxLength={10}
-                aria-invalid={Boolean(registerFieldErrors.phone)}
-              />
-              {registerFieldErrors.phone ? <small className="field-error">{registerFieldErrors.phone}</small> : null}
-            </label>
-            <label>
-              Email
-              <input
-                value={registerEmail}
-                onChange={(event) => {
-                  setRegisterEmail(event.target.value);
-                  setFeedback("");
-                }}
-                placeholder="email@homeswift.vn"
-                autoComplete="email"
-                aria-invalid={Boolean(registerFieldErrors.email)}
-              />
-              {registerFieldErrors.email ? <small className="field-error">{registerFieldErrors.email}</small> : null}
-            </label>
-            <label>
-              Khu vực
-              <select
-                value={registerCity}
-                onChange={(event) => {
-                  setRegisterCity(event.target.value);
-                  setFeedback("");
-                }}
-                required
-                aria-invalid={Boolean(registerFieldErrors.city)}
-              >
-                <option value="" disabled>Chọn thành phố/khu vực</option>
-                {cityOptions.map((city) => (
-                  <option key={city} value={city}>{city}</option>
-                ))}
-              </select>
-              {registerFieldErrors.city ? <small className="field-error">{registerFieldErrors.city}</small> : null}
-            </label>
-            <button className="button primary login-submit" type="submit" disabled={isSubmitting || !canSubmitRegister}>
-              {isSubmitting ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
-            </button>
-          </form>
-        )}
+          )}
 
-        {feedback ? <p className="feedback login-feedback">{feedback}</p> : null}
+          {feedback ? <p className="feedback login-feedback">{feedback}</p> : null}
+        </div>
       </div>
 
       {isOtpOpen ? (
         <div className="otp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="otp-title">
           <form className="otp-modal" onSubmit={submitOtp}>
+            <span className="login-card-icon"><Sparkles size={22} /></span>
             <h2 id="otp-title">Xác thực số điện thoại</h2>
             <p>Mã OTP đã được gửi tới số {otpPhone}. Vui lòng nhập mã để hoàn tất đăng ký.</p>
             {otpHint ? <strong>{otpHint}</strong> : null}

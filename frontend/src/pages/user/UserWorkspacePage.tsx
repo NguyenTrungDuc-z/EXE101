@@ -393,7 +393,7 @@ const handleLogout = () => {
           <div style={{ background: "linear-gradient(135deg, #0066FF 0%, #0052CC 100%)", borderRadius: "24px", padding: "24px", color: "white", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "relative", zIndex: 1 }}>
               <div style={{ fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Chương trình khách hàng thân thiết</div>
-              <div style={{ fontSize: "12px", opacity: 0.8, marginBottom: "16px" }}>Chuyên hàng thân thiết là HomeSwift</div>
+              <div style={{ fontSize: "12px", opacity: 0.8, marginBottom: "16px" }}>Chuyên hàng thân thiết là ViecNhanh</div>
               <div style={{ fontSize: "24px", fontWeight: 800, marginBottom: "4px" }}>5,000 điểm</div>
               <div style={{ fontSize: "12px", opacity: 0.8 }}>• Thưởng cho khách hàng thân thiết</div>
             </div>
@@ -411,7 +411,7 @@ const handleLogout = () => {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
         <div style={{ background: "white", padding: "32px", borderRadius: "24px", border: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontSize: "16px", fontWeight: 700, color: "#1E293B", marginBottom: "4px" }}>Ví HomeSwift</div>
+            <div style={{ fontSize: "16px", fontWeight: 700, color: "#1E293B", marginBottom: "4px" }}>Ví ViecNhanh</div>
             <div style={{ fontSize: "14px", color: "#64748B", marginBottom: "12px" }}>Số dư khả dụng</div>
             <div style={{ fontSize: "32px", fontWeight: 850, color: "#0066FF" }}>{user?.walletBalance?.toLocaleString()}đ</div>
           </div>
@@ -830,21 +830,7 @@ const handleLogout = () => {
         height: "100vh",
         zIndex: 100
       }}>
-        <div style={{ padding: "32px 24px 20px", display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{ 
-            width: "32px", 
-            height: "32px", 
-            background: "#0066FF", 
-            borderRadius: "8px", 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "center",
-            color: "white"
-          }}>
-            <ShieldCheck size={20} fill="currentColor" />
-          </div>
-          <span style={{ fontSize: "22px", fontWeight: 800, color: "#1E293B", letterSpacing: "-0.5px" }}>HomeSwift</span>
-        </div>
+        
 
         <nav style={{ flex: 1, padding: "0 16px" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
