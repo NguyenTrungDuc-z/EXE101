@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+﻿import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ServiceIcons } from "../assets/service-icons";
 
@@ -34,6 +34,7 @@ function readStoredUser() {
 }
 
 export default function UserLayout() {
+  const navigate = useNavigate();
   const [user, setUser] = useState<StoredUser | null>(() => readStoredUser());
 
   useEffect(() => {
@@ -45,6 +46,13 @@ export default function UserLayout() {
       window.removeEventListener("homeswift-auth", syncUser);
     };
   }, []);
+
+  const logout = () => {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    window.dispatchEvent(new Event("homeswift-auth"));
+    setUser(null);
+    navigate("/");
+  };
 
   return (
     <div className="app-frame shell-user">
@@ -73,6 +81,9 @@ export default function UserLayout() {
               <NavLink to="/user/workspace" className="profile-avatar-link" aria-label="Mở hồ sơ cá nhân">
                 <img src={user.avatar} alt={user.name} />
               </NavLink>
+              <button className="button secondary header-logout-button" type="button" onClick={logout}>
+                Đăng xuất
+              </button>
             </div>
           ) : null}
         </nav>

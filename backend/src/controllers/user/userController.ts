@@ -119,15 +119,15 @@ function normalizeServiceVariants(
   return hasOther
     ? normalized
     : [
-        ...normalized,
-        {
-          code: "other",
-          name: "Loại máy khác",
-          priceMin: fallbackUnitPrice,
-          priceMax: fallbackUnitPrice * 2,
-          pricingType: "range"
-        }
-      ];
+      ...normalized,
+      {
+        code: "other",
+        name: "Loại máy khác",
+        priceMin: fallbackUnitPrice,
+        priceMax: fallbackUnitPrice * 2,
+        pricingType: "range"
+      }
+    ];
 }
 
 function getServiceMeta(
@@ -299,8 +299,8 @@ export async function listUserJobs(request: Request, response: Response) {
       const matchesCategoryName = categoryNameFilters.length ? categoryNameFilters.includes(job.categoryName) : true;
       const matchesSearch = search
         ? [job.title, job.location, job.summary, job.companyName, job.categoryName].some((value) =>
-            value.toLowerCase().includes(search)
-          )
+          value.toLowerCase().includes(search)
+        )
         : true;
       const matchesBudget = job.budgetMin >= minBudgetFilter && job.budgetMin <= maxBudgetFilter;
       const matchesRating = Number(job.ratingLabel) >= minRatingFilter;
@@ -387,7 +387,7 @@ export async function listUserOrders(request: any, response: Response) {
     orders.map((order) => {
       const employer = userMap.get(order.employerCode);
       const candidate = userMap.get(order.candidateCode);
-      
+
       return {
         ...order,
         jobTitle: jobMap.get(order.jobCode)?.title ?? order.jobCode,
@@ -508,7 +508,7 @@ export async function createUserOrder(request: any, response: Response) {
     code: generateCode("ORD"),
     jobCode: job.code,
     employerCode: user.code,
-    candidateCode: job.employerCode,
+    candidateCode: "UNASSIGNED",
     status: paymentMethod === "wallet" ? "PENDING_ASSIGN" : "payment_pending",
     scheduledAt: scheduledDate,
     totalAmount: amount,
@@ -579,9 +579,9 @@ export async function markOrderTransferred(request: Request, response: Response)
   });
 }
 
-export async function acceptUserOrder(request: Request, response: Response) {
+export async function acceptUserOrder(request: any, response: Response) {
   const { orderCode } = request.params;
-  const workerCode = String(request.body.workerCode ?? "");
+  const workerCode = String(request.user?.code ?? request.body.workerCode ?? "");
   const order = await OrderModel.findOne({ code: orderCode });
 
   if (!order) {
@@ -594,16 +594,30 @@ export async function acceptUserOrder(request: Request, response: Response) {
     return;
   }
 
-  if (workerCode) {
-    order.candidateCode = workerCode;
+  if (!workerCode) {
+    response.status(400).json({ message: "Thiếu mã thợ nhận đơn." });
+    return;
   }
-  order.status = "IN_PROGRESS";
+
+  const activeOrder = await OrderModel.findOne({
+    candidateCode: workerCode,
+    status: { $in: ["PENDING_ACCEPT", "IN_PROGRESS"] },
+    code: { $ne: order.code }
+  }).lean();
+
+  if (activeOrder) {
+    response.status(400).json({ message: "Bạn đang có đơn chưa hoàn thành nên chưa thể nhận đơn mới." });
+    return;
+  }
+
+  order.candidateCode = workerCode;
+  order.status = "PENDING_ACCEPT";
   await order.save();
 
   response.json(order);
 }
 
-export async function requestOrderCompletion(request: Request, response: Response) {
+export async function requestOrderCompletion(request: any, response: Response) {
   const { orderCode } = request.params;
   const order = await OrderModel.findOne({ code: orderCode });
 
@@ -612,12 +626,53 @@ export async function requestOrderCompletion(request: Request, response: Respons
     return;
   }
 
-  if (!["COMPLETED_BY_TECHNICIAN", "IN_PROGRESS"].includes(order.status)) {
+  if (order.candidateCode !== request.user?.code) {
+    response.status(403).json({ message: "Bạn không phải thợ của đơn hàng này." });
+    return;
+  }
+
+  if (!["PENDING_ACCEPT", "IN_PROGRESS"].includes(order.status)) {
     response.status(400).json({ message: "Đơn hàng chưa ở trạng thái thực hiện." });
     return;
   }
 
-  order.status = "COMPLETED_BY_TECHNICIAN";
+  order.status = "IN_PROGRESS";
+  await order.save();
+
+  response.json(order);
+}
+
+export async function cancelUserOrder(request: any, response: Response) {
+  const { orderCode } = request.params;
+  const userCode = request.user?.code;
+  const order = await OrderModel.findOne({ code: orderCode });
+
+  if (!order) {
+    response.status(404).json({ message: "Không tìm thấy đơn hàng." });
+    return;
+  }
+
+  if (order.employerCode !== userCode) {
+    response.status(403).json({ message: "Bạn không có quyền hủy đơn này." });
+    return;
+  }
+
+  if (["completed", "cancelled"].includes(order.status)) {
+    response.status(400).json({ message: "Đơn hàng không thể hủy ở trạng thái hiện tại." });
+    return;
+  }
+
+  if (order.paymentStatus === "paid") {
+    const user = await UserModel.findOne({ code: order.employerCode });
+    if (user && order.frozenBalance > 0) {
+      user.walletBalance = (user.walletBalance ?? 0) + order.frozenBalance;
+      await user.save();
+    }
+  }
+
+  order.status = "cancelled";
+  order.paymentStatus = order.paymentStatus === "paid" ? "refunded" : "failed";
+  order.frozenBalance = 0;
   await order.save();
 
   response.json(order);
@@ -638,10 +693,10 @@ export async function completeUserOrder(request: Request, response: Response) {
   }
 
   const frozenAmount = order.frozenBalance || order.totalAmount;
-  
+
   // Random commission rate between 20% and 30%
   const commissionRate = Math.floor(Math.random() * (30 - 20 + 1) + 20) / 100; // e.g. 0.20 to 0.30
-  
+
   const platformFee = Math.round(frozenAmount * commissionRate);
   const workerPayout = frozenAmount - platformFee;
   const worker = await UserModel.findOne({ code: order.candidateCode });
@@ -649,7 +704,7 @@ export async function completeUserOrder(request: Request, response: Response) {
   if (worker) {
     worker.walletBalance = (worker.walletBalance ?? 0) + workerPayout;
     await worker.save();
-    
+
     // Create wallet transaction for worker earning
     await WalletTransactionModel.create({
       code: generateCode("WTR"),
@@ -742,7 +797,7 @@ export async function createWalletTransaction(request: any, response: Response) 
   if (type === "deposit") {
     user.walletBalance = (user.walletBalance ?? 0) + amount;
     await user.save();
-    
+
     await WalletTransactionModel.create({
       code: generateCode("WTR"),
       userCode: user.code,
@@ -755,7 +810,7 @@ export async function createWalletTransaction(request: any, response: Response) 
   } else if (type === "withdraw") {
     user.walletBalance = (user.walletBalance ?? 0) - amount;
     await user.save();
-    
+
     await WalletTransactionModel.create({
       code: generateCode("WTR"),
       userCode: user.code,

@@ -25,6 +25,16 @@ export const acceptOrder = asyncHandler(async (req: any, res: Response) => {
     return res.status(400).json({ error: "Đơn hàng này đã có người nhận hoặc không ở trạng thái chờ" });
   }
 
+  const activeOrder = await OrderModel.findOne({
+    candidateCode,
+    status: { $in: ["confirmed", "in_service"] },
+    _id: { $ne: order._id }
+  }).lean();
+
+  if (activeOrder) {
+    return res.status(400).json({ error: "Bạn đang có đơn chưa hoàn thành nên chưa thể nhận đơn mới." });
+  }
+
   // Chặn Thợ tự nhận việc của chính mình (nếu thợ cũng là người đăng)
   // if (candidateCode === order.employerCode) {
   //   return res.status(400).json({ error: "Bạn không thể tự nhận việc của chính mình" });

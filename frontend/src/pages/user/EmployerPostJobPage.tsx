@@ -1,9 +1,9 @@
-import type { FormEvent } from "react";
+﻿import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { platformApi } from "../../api/platformApi";
-import { DEMO_CANDIDATE_CODE, DEMO_EMPLOYER_CODE } from "../../config";
-import type { Category, CheckoutInfo, JobDetail, Order, UserProfile } from "../../types/platform";
+import { DEMO_CANDIDATE_CODE } from "../../config";
+import type { Category, CheckoutInfo, Job, JobDetail, Order, UserProfile } from "../../types/platform";
 import { viText } from "../../utils/vietnameseText";
 
 const AUTH_STORAGE_KEY = "homeswift_user";
@@ -14,22 +14,22 @@ const BANK_INFO = {
   accountName: "ViecNhanh"
 };
 
-const addressTree = {
-  "TP. Hồ Chí Minh": {
-    "Quận 1": ["Phường Bến Nghé", "Phường Bến Thành", "Phường Đa Kao"],
-    "Quận 7": ["Phường Tân Phong", "Phường Tân Phú", "Phường Phú Mỹ"],
-    "Thành phố Thủ Đức": ["Phường Thảo Điền", "Phường Linh Trung", "Phường Hiệp Bình Chánh"]
-  },
-  "Hà Nội": {
-    "Quận Ba Đình": ["Phường Ngọc Hà", "Phường Điện Biên", "Phường Đội Cấn"],
-    "Quận Cầu Giấy": ["Phường Dịch Vọng", "Phường Nghĩa Tân", "Phường Yên Hòa"],
-    "Quận Hoàn Kiếm": ["Phường Hàng Bạc", "Phường Tràng Tiền", "Phường Hàng Bông"]
-  },
-  "Đà Nẵng": {
-    "Quận Hải Châu": ["Phường Hải Châu 1", "Phường Hải Châu 2", "Phường Thạch Thang"],
-    "Quận Sơn Trà": ["Phường An Hải Bắc", "Phường Phước Mỹ", "Phường Mân Thái"]
-  }
-} as const;
+const PROVINCES_API = "https://provinces.open-api.vn/api";
+
+type ProvinceOption = {
+  code: number;
+  name: string;
+};
+
+type DistrictOption = {
+  code: number;
+  name: string;
+};
+
+type WardOption = {
+  code: number;
+  name: string;
+};
 
 const timeSlots = [
   "08:00 - 10:00",
@@ -115,7 +115,16 @@ function toScheduledAt(dateValue: string, slot: string) {
   return date.toISOString();
 }
 
+async function fetchAddressJson<T>(path: string): Promise<T> {
+  const response = await fetch(`${PROVINCES_API}${path}`);
+  if (!response.ok) {
+    throw new Error("Không tải được dữ liệu địa chỉ từ provinces.open-api.vn.");
+  }
+  return response.json() as Promise<T>;
+}
+
 export default function EmployerPostJobPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const jobCode = searchParams.get("jobCode") ?? "";
   const queryQuantity = Math.max(1, Number(searchParams.get("quantity") ?? 1));
@@ -128,6 +137,7 @@ export default function EmployerPostJobPage() {
   const userCode = readStoredUserCode();
 
   const [categories, setCategories] = useState<Category[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [jobDetail, setJobDetail] = useState<JobDetail | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [selectedCategoryCode, setSelectedCategoryCode] = useState("");
@@ -140,18 +150,23 @@ export default function EmployerPostJobPage() {
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedWard, setSelectedWard] = useState("");
+  const [provinceOptions, setProvinceOptions] = useState<ProvinceOption[]>([]);
+  const [districtOptions, setDistrictOptions] = useState<DistrictOption[]>([]);
+  const [wardOptions, setWardOptions] = useState<WardOption[]>([]);
   const [newAddress, setNewAddress] = useState("");
   const [voucher, setVoucher] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
   const [checkout, setCheckout] = useState<CheckoutInfo | null>(null);
   const [feedback, setFeedback] = useState("");
+  const [addressFeedback, setAddressFeedback] = useState("");
+  const [transferNoticeOpen, setTransferNoticeOpen] = useState(false);
 
   useEffect(() => {
     platformApi.getUserHome().then((data) => {
       setCategories(data.categories);
-      setSelectedCategoryCode((current) => current || data.categories[0]?.code || "");
     });
+    platformApi.getUserJobs().then(setJobs).catch((reason: Error) => setFeedback(reason.message));
     platformApi.getUserProfile(userCode).then((data) => {
       setProfile(data);
       const firstAddress = data.savedAddresses[0] || data.address;
@@ -161,6 +176,12 @@ export default function EmployerPostJobPage() {
       }
     });
   }, [userCode]);
+
+  useEffect(() => {
+    fetchAddressJson<ProvinceOption[]>("/p/")
+      .then(setProvinceOptions)
+      .catch((reason: Error) => setAddressFeedback(reason.message));
+  }, []);
 
   useEffect(() => {
     if (!jobCode) {
@@ -174,6 +195,24 @@ export default function EmployerPostJobPage() {
       setSelectedVariantCode(queryVariantCode || detail.serviceVariants[0]?.code || "");
     }).catch((reason: Error) => setFeedback(reason.message));
   }, [jobCode, queryQuantity, queryVariantCode]);
+
+  useEffect(() => {
+    if (jobCode || !selectedCategoryCode || !jobs.length) {
+      return;
+    }
+
+    const matchedJob = jobs.find((job) => job.categoryCode === selectedCategoryCode);
+    if (!matchedJob) {
+      setJobDetail(null);
+      setSelectedVariantCode("");
+      return;
+    }
+
+    platformApi.getUserJobDetail(matchedJob.code).then((detail) => {
+      setJobDetail(detail);
+      setSelectedVariantCode(detail.serviceVariants[0]?.code || "");
+    }).catch((reason: Error) => setFeedback(reason.message));
+  }, [jobCode, jobs, selectedCategoryCode]);
 
   const serviceDays = useMemo(() => buildServiceDays(), []);
   const availableTimeSlots = useMemo(
@@ -193,10 +232,29 @@ export default function EmployerPostJobPage() {
   useEffect(() => {
     setSelectedDistrict("");
     setSelectedWard("");
+    setDistrictOptions([]);
+    setWardOptions([]);
+
+    if (!selectedCity) {
+      return;
+    }
+
+    fetchAddressJson<{ districts: DistrictOption[] }>(`/p/${selectedCity}?depth=2`)
+      .then((data) => setDistrictOptions(data.districts ?? []))
+      .catch((reason: Error) => setAddressFeedback(reason.message));
   }, [selectedCity]);
 
   useEffect(() => {
     setSelectedWard("");
+    setWardOptions([]);
+
+    if (!selectedDistrict) {
+      return;
+    }
+
+    fetchAddressJson<{ wards: WardOption[] }>(`/d/${selectedDistrict}?depth=2`)
+      .then((data) => setWardOptions(data.wards ?? []))
+      .catch((reason: Error) => setAddressFeedback(reason.message));
   }, [selectedDistrict]);
 
   const selectedCategory = useMemo(
@@ -204,11 +262,9 @@ export default function EmployerPostJobPage() {
     [categories, selectedCategoryCode]
   );
 
-  const cityOptions = Object.keys(addressTree);
-  const districtOptions = selectedCity ? Object.keys(addressTree[selectedCity as keyof typeof addressTree] ?? {}) : [];
-  const wardOptions = selectedCity && selectedDistrict
-    ? [...((addressTree[selectedCity as keyof typeof addressTree] as Record<string, readonly string[]> | undefined)?.[selectedDistrict] ?? [])]
-    : [];
+  const selectedProvinceName = provinceOptions.find((item) => String(item.code) === selectedCity)?.name ?? "";
+  const selectedDistrictName = districtOptions.find((item) => String(item.code) === selectedDistrict)?.name ?? "";
+  const selectedWardName = wardOptions.find((item) => String(item.code) === selectedWard)?.name ?? "";
   const newAddressErrors = {
     city: addressMode === "new" && !selectedCity ? "Vui lòng chọn tỉnh/thành phố." : "",
     district: addressMode === "new" && !selectedDistrict ? "Vui lòng chọn quận/huyện." : "",
@@ -216,12 +272,12 @@ export default function EmployerPostJobPage() {
     street: addressMode === "new" && !newAddress.trim() ? "Vui lòng nhập địa chỉ cụ thể." : ""
   };
   const savedAddresses = profile?.savedAddresses ?? [];
-  const unitLabel = jobDetail?.unitLabel ?? "máy";
+  const unitLabel = jobDetail?.unitLabel ?? "dich vu";
   const serviceVariants = jobDetail?.serviceVariants ?? [];
   const selectedVariant = serviceVariants.find((item) => item.code === selectedVariantCode) ?? serviceVariants[0];
   const pricingType = selectedVariant?.pricingType ?? queryPricingType;
-  const machineType = selectedVariant?.name ?? (queryMachineType || "Loại dịch vụ");
-  const unitPrice = selectedVariant?.price ?? (queryUnitPrice || jobDetail?.budgetMin || parseBudget(selectedCategory?.averageBudgetLabel));
+  const machineType = selectedVariant?.name ?? (queryMachineType || "");
+  const unitPrice = selectedVariant?.price ?? (jobDetail ? (queryUnitPrice || jobDetail.budgetMin || parseBudget(selectedCategory?.averageBudgetLabel)) : 0);
   const rangePriceMin = selectedVariant?.priceMin ?? (queryPriceMin || unitPrice);
   const rangePriceMax = selectedVariant?.priceMax ?? (queryPriceMax || unitPrice);
   const isRangePrice = pricingType === "range";
@@ -231,10 +287,16 @@ export default function EmployerPostJobPage() {
   const serviceFee = Math.round(subtotal * 0.05);
   const tax = Math.round(subtotal * 0.0273);
   const total = subtotal + serviceFee + tax;
-  const address = addressMode === "saved" ? selectedAddress : `${newAddress.trim()}, ${selectedWard}, ${selectedDistrict}, ${selectedCity}`;
+  const address = addressMode === "saved" ? selectedAddress : `${newAddress.trim()}, ${selectedWardName}, ${selectedDistrictName}, ${selectedProvinceName}`;
   const hasNewAddressError = Boolean(newAddressErrors.city || newAddressErrors.district || newAddressErrors.ward || newAddressErrors.street);
   const previewTransferContent = "HOMESWIFT TAO DON";
   const previewQrUrl = buildBankQrUrl(total, previewTransferContent);
+  const variantPriceLabel = (variant: typeof serviceVariants[number]) => {
+    if (variant.pricingType === "range") {
+      return `${variant.name} (${formatCurrency(variant.priceMin ?? 0)} - ${formatCurrency(variant.priceMax ?? 0)})`;
+    }
+    return `${variant.name} (${formatCurrency(variant.price ?? 0)})`;
+  };
 
   const submitBooking = async (event: FormEvent) => {
     event.preventDefault();
@@ -242,6 +304,16 @@ export default function EmployerPostJobPage() {
 
     if (!selectedCategory) {
       setFeedback("Vui lòng chọn loại dịch vụ.");
+      return;
+    }
+
+    if (!jobDetail) {
+      setFeedback("Vui long chon loai dich vu hop le truoc khi thanh toan.");
+      return;
+    }
+
+    if (serviceVariants.length && !selectedVariant) {
+      setFeedback("Vui long chon loai may/dich vu.");
       return;
     }
 
@@ -257,25 +329,7 @@ export default function EmployerPostJobPage() {
     }
 
     try {
-      const sourceJobCode = jobDetail?.code || jobCode || (await platformApi.createUserJob({
-        employerCode: DEMO_EMPLOYER_CODE,
-        title: `${viText(selectedCategory.name)} (${quantity} ${unitLabel})`,
-        categoryCode: selectedCategory.code,
-        location: address,
-        salaryLabel: `${formatCurrency(total)} / lần`,
-        budgetMin: unitPrice,
-        budgetMax: total,
-        employmentType: "task",
-        urgency: "medium",
-        summary: `${viText(selectedCategory.name)} - ${machineType}, thời gian ${selectedTime}, ngày ${selectedDay}.`,
-        requirements: [
-          `Số lượng: ${quantity} ${unitLabel}`,
-          `Loại máy: ${machineType}`,
-          isRangePrice ? `Giá lưu động: ${formatCurrency(rangePriceMin)} - ${formatCurrency(rangePriceMax)} / ${unitLabel}` : `Đơn giá: ${formatCurrency(unitPrice)} / ${unitLabel}`,
-          `Thanh toán: ${paymentMethod}`
-        ],
-        startDate: toScheduledAt(selectedDay, selectedTime)
-      })).code;
+      const sourceJobCode = jobDetail.code;
 
       const result = await platformApi.createUserOrder({
         userCode,
@@ -308,7 +362,7 @@ export default function EmployerPostJobPage() {
     try {
       const updatedOrder = await platformApi.markOrderTransferred(createdOrder.code);
       setCreatedOrder(updatedOrder);
-      setFeedback("Đã ghi nhận bạn đã chuyển khoản. Admin sẽ kiểm tra và duyệt tiền.");
+      setTransferNoticeOpen(true);
     } catch (reason) {
       setFeedback((reason as Error).message);
     }
@@ -345,6 +399,25 @@ export default function EmployerPostJobPage() {
                 Tôi đã chuyển khoản
               </button>
               {feedback ? <p className="booking-feedback">{feedback}</p> : null}
+              {transferNoticeOpen ? (
+                <div className="otp-modal-backdrop" role="dialog" aria-modal="true">
+                  <div className="otp-modal">
+                    <button
+                      type="button"
+                      aria-label="Đóng thông báo"
+                      onClick={() => navigate("/")}
+                      style={{ marginLeft: "auto", border: 0, background: "transparent", fontSize: 22, cursor: "pointer" }}
+                    >
+                      ×
+                    </button>
+                    <h2>Đã ghi nhận chuyển khoản</h2>
+                    <p>HomeSwift đã ghi nhận bạn đã chuyển khoản. Admin cần thời gian kiểm tra và duyệt tiền trước khi điều phối thợ.</p>
+                    <button className="button primary" type="button" onClick={() => navigate("/")}>
+                      Về trang chủ
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </article>
           </div>
         </section>
@@ -368,9 +441,14 @@ export default function EmployerPostJobPage() {
                   Loại dịch vụ
                   <select
                     value={selectedCategoryCode}
-                    onChange={(event) => setSelectedCategoryCode(event.target.value)}
-                    disabled={Boolean(jobDetail)}
+                    onChange={(event) => {
+                      setSelectedCategoryCode(event.target.value);
+                      setJobDetail(null);
+                      setSelectedVariantCode("");
+                    }}
+                    disabled={Boolean(jobCode)}
                   >
+                    <option value="">Chọn loại dịch vụ</option>
                     {categories.map((category) => (
                       <option key={category.code} value={category.code}>
                         {viText(category.name)}
@@ -388,7 +466,18 @@ export default function EmployerPostJobPage() {
                 </label>
                 <label>
                   Loại {unitLabel}
-                  <input value={machineType} readOnly />
+                  <select
+                    value={selectedVariantCode}
+                    onChange={(event) => setSelectedVariantCode(event.target.value)}
+                    disabled={!serviceVariants.length}
+                  >
+                    <option value="">Chọn loại {unitLabel}</option>
+                    {serviceVariants.map((variant) => (
+                      <option key={variant.code} value={variant.code}>
+                        {variantPriceLabel(variant)}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               </div>
             </section>
@@ -467,8 +556,8 @@ export default function EmployerPostJobPage() {
                       Tỉnh/Thành phố
                       <select value={selectedCity} onChange={(event) => setSelectedCity(event.target.value)} aria-invalid={Boolean(newAddressErrors.city)}>
                         <option value="">Chọn tỉnh/thành phố</option>
-                        {cityOptions.map((city) => (
-                          <option key={city} value={city}>{city}</option>
+                        {provinceOptions.map((city) => (
+                          <option key={city.code} value={city.code}>{city.name}</option>
                         ))}
                       </select>
                       {newAddressErrors.city ? <small className="field-error">{newAddressErrors.city}</small> : null}
@@ -478,7 +567,7 @@ export default function EmployerPostJobPage() {
                       <select value={selectedDistrict} onChange={(event) => setSelectedDistrict(event.target.value)} disabled={!selectedCity} aria-invalid={Boolean(newAddressErrors.district)}>
                         <option value="">Chọn quận/huyện</option>
                         {districtOptions.map((district) => (
-                          <option key={district} value={district}>{district}</option>
+                          <option key={district.code} value={district.code}>{district.name}</option>
                         ))}
                       </select>
                       {newAddressErrors.district ? <small className="field-error">{newAddressErrors.district}</small> : null}
@@ -488,7 +577,7 @@ export default function EmployerPostJobPage() {
                       <select value={selectedWard} onChange={(event) => setSelectedWard(event.target.value)} disabled={!selectedDistrict} aria-invalid={Boolean(newAddressErrors.ward)}>
                         <option value="">Chọn phường/xã</option>
                         {wardOptions.map((ward) => (
-                          <option key={ward} value={ward}>{ward}</option>
+                          <option key={ward.code} value={ward.code}>{ward.name}</option>
                         ))}
                       </select>
                       {newAddressErrors.ward ? <small className="field-error">{newAddressErrors.ward}</small> : null}
@@ -505,6 +594,7 @@ export default function EmployerPostJobPage() {
                     </label>
                   </div>
                 ) : null}
+                {addressFeedback ? <small className="field-error">{addressFeedback}</small> : null}
               </div>
             </section>
           </div>

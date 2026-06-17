@@ -9,7 +9,18 @@ import GoogleLogin from "../../auth/GoogleLogin";
 const AUTH_STORAGE_KEY = "homeswift_user";
 const FB_APP_ID = "1969315983727979";
 const GOOGLE_CLIENT_ID = "221668802735-ps1j4hoftkj11obo4g4d0eod36ljc39h.apps.googleusercontent.com";
-const cityOptions = ["Hà Nội", "TP. Hồ Chí Minh", "Đà Nẵng", "Hải Phòng", "Cần Thơ", "Bình Dương", "Đồng Nai", "Khánh Hòa"];
+const PROVINCES_API = "https://provinces.open-api.vn/api";
+
+type ProvinceOption = { code: number; name: string };
+type DistrictOption = { code: number; name: string };
+type WardOption = { code: number; name: string };
+type RegisterField = "name" | "phone" | "email" | "city";
+
+async function fetchAddressJson<T>(path: string): Promise<T> {
+  const res = await fetch(`${PROVINCES_API}${path}`);
+  if (!res.ok) throw new Error("Không tải được dữ liệu địa chỉ.");
+  return res.json() as Promise<T>;
+}
 
 const loginHighlights = [
   "Đặt lịch và theo dõi đơn dịch vụ trong một nơi",
@@ -27,15 +38,9 @@ function isValidVietnamPhone(value: string) {
 
 function isValidRegistrationEmail(value: string) {
   const email = value.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return false;
-  }
-
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
   const domain = email.split("@")[1];
-  if (!domain || domain === "gamil.com") {
-    return false;
-  }
-
+  if (!domain || domain === "gamil.com") return false;
   return domain === "gmail.com" || /\.(com|com\.vn|vn|edu|edu\.vn|ac\.vn|org|org\.vn)$/i.test(domain);
 }
 
@@ -47,14 +52,28 @@ export default function LoginPage() {
   const [registerName, setRegisterName] = useState("");
   const [registerPhone, setRegisterPhone] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
-  const [registerCity, setRegisterCity] = useState("");
+  const [registerProvince, setRegisterProvince] = useState("");
+  const [registerDistrict, setRegisterDistrict] = useState("");
+  const [registerWard, setRegisterWard] = useState("");
+  const [registerTouched, setRegisterTouched] = useState<Record<RegisterField, boolean>>({
+    name: false, phone: false, email: false, city: false
+  });
+  const [provinceOptions, setProvinceOptions] = useState<ProvinceOption[]>([]);
+  const [districtOptions, setDistrictOptions] = useState<DistrictOption[]>([]);
+  const [wardOptions, setWardOptions] = useState<WardOption[]>([]);
+  const [addressFeedback, setAddressFeedback] = useState("");
   const [otpPhone, setOtpPhone] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpHint, setOtpHint] = useState("");
+  const [loginOtp, setLoginOtp] = useState("");
+  const [pendingLogin, setPendingLogin] = useState<any | null>(null);
   const [isOtpOpen, setIsOtpOpen] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [feedbackType, setFeedbackType] = useState<"success" | "error">("success");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fbLogin, setFbLogin] = useState<FacebookLogin | null>(null);
+  const [googleLogin, setGoogleLogin] = useState<GoogleLogin | null>(null);
+
   const normalizedRegisterPhone = normalizePhone(registerPhone);
   const registerFieldErrors = {
     name: registerName.trim() ? "" : "Họ và tên không được bỏ trống.",
@@ -68,50 +87,93 @@ export default function LoginPage() {
       : isValidRegistrationEmail(registerEmail)
         ? ""
         : "Email phải là gmail.com hoặc email công ty/trường học hợp lệ.",
-    city: registerCity ? "" : "Vui lòng chọn thành phố/khu vực."
+    city: registerProvince && registerDistrict && registerWard
+      ? ""
+      : "Vui lòng chọn đầy đủ tỉnh/thành, quận/huyện và phường/xã."
   };
   const canSubmitRegister =
-    !registerFieldErrors.name && !registerFieldErrors.phone && !registerFieldErrors.email && !registerFieldErrors.city;
+    !registerFieldErrors.name && !registerFieldErrors.phone &&
+    !registerFieldErrors.email && !registerFieldErrors.city;
+  const showRegisterError = (field: RegisterField) =>
+    registerTouched[field] && Boolean(registerFieldErrors[field]);
+  const touchRegisterField = (field: RegisterField) =>
+    setRegisterTouched((cur) => ({ ...cur, [field]: true }));
 
+  // Facebook SDK init
   useEffect(() => {
-    const fbLoginInstance = new FacebookLogin(FB_APP_ID);
-    setFbLogin(fbLoginInstance);
+    const instance = new FacebookLogin(FB_APP_ID);
+    setFbLogin(instance);
   }, []);
 
+  // Load provinces
   useEffect(() => {
-    const googleLoginInstance = new GoogleLogin(GOOGLE_CLIENT_ID);
-    const redirectPath = searchParams.get("redirect") || "/user/workspace";
+    fetchAddressJson<ProvinceOption[]>("/p/")
+      .then(setProvinceOptions)
+      .catch((err: Error) => setAddressFeedback(err.message));
+  }, []);
 
-    googleLoginInstance.setOnLoginSuccess(async (authResponse) => {
+  // Load districts when province changes
+  useEffect(() => {
+    setRegisterDistrict("");
+    setRegisterWard("");
+    setDistrictOptions([]);
+    setWardOptions([]);
+    setRegisterTouched((cur) => ({ ...cur, city: false }));
+    if (!registerProvince) return;
+    fetchAddressJson<{ districts: DistrictOption[] }>(`/p/${registerProvince}?depth=2`)
+      .then((data) => setDistrictOptions(data.districts ?? []))
+      .catch((err: Error) => setAddressFeedback(err.message));
+  }, [registerProvince]);
+
+  // Load wards when district changes
+  useEffect(() => {
+    setRegisterWard("");
+    setWardOptions([]);
+    setRegisterTouched((cur) => ({ ...cur, city: false }));
+    if (!registerDistrict) return;
+    fetchAddressJson<{ wards: WardOption[] }>(`/d/${registerDistrict}?depth=2`)
+      .then((data) => setWardOptions(data.wards ?? []))
+      .catch((err: Error) => setAddressFeedback(err.message));
+  }, [registerDistrict]);
+
+  // Google login init
+  useEffect(() => {
+    const googleInstance = new GoogleLogin(GOOGLE_CLIENT_ID);
+    googleInstance.setOnLoginSuccess(async (authResponse) => {
       try {
         const result = await platformApi.loginWithGoogle({ credential: authResponse.credential });
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...result.user, token: result.token }));
         window.dispatchEvent(new Event("homeswift-auth"));
+        setFeedbackType("success");
         setFeedback("Đăng nhập Google thành công!");
-        setTimeout(() => navigate(redirectPath), 500);
+        setTimeout(() => navigate("/"), 500);
       } catch (error) {
+        setFeedbackType("error");
         setFeedback((error as Error).message);
       }
     });
-
-    googleLoginInstance.setOnLoginError((error) => {
+    googleInstance.setOnLoginError((error) => {
+      setFeedbackType("error");
       setFeedback(error.message);
     });
-
-    setTimeout(() => {
-      googleLoginInstance.renderButton("google-signin-button");
-    }, 500);
+    setGoogleLogin(googleInstance);
+    setTimeout(() => googleInstance.renderButton("google-signin-button"), 500);
   }, []);
 
+  // Show/hide Google button based on mode
   useEffect(() => {
-    const googleButton = document.getElementById("google-signin-button");
-    if (googleButton) {
-      googleButton.style.display = mode === "login" ? "flex" : "none";
+    const btn = document.getElementById("google-signin-button");
+    if (btn) {
+      btn.style.display = mode === "login" ? "flex" : "none";
+      if (mode === "login" && googleLogin && !btn.childElementCount) {
+        setTimeout(() => googleLogin.renderButton("google-signin-button"), 50);
+      }
     }
-  }, [mode]);
+  }, [mode, googleLogin]);
 
   const handleFacebookLogin = async () => {
     if (!fbLogin) {
+      setFeedbackType("error");
       setFeedback("Facebook SDK đang khởi tạo, vui lòng thử lại sau giây lát.");
       return;
     }
@@ -125,10 +187,11 @@ export default function LoginPage() {
       });
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...result.user, token: result.token }));
       window.dispatchEvent(new Event("homeswift-auth"));
-      const redirectPath = searchParams.get("redirect") || "/user/workspace";
+      setFeedbackType("success");
       setFeedback("Đăng nhập Facebook thành công!");
-      setTimeout(() => navigate(redirectPath), 500);
+      setTimeout(() => navigate("/"), 500);
     } catch (error) {
+      setFeedbackType("error");
       setFeedback((error as Error).message);
     } finally {
       setIsSubmitting(false);
@@ -138,51 +201,65 @@ export default function LoginPage() {
   const submitLogin = async (event: FormEvent) => {
     event.preventDefault();
     setFeedback("");
-
     if (!identifier.trim()) {
+      setFeedbackType("error");
       setFeedback("Vui lòng nhập số điện thoại.");
       return;
     }
-
     setIsSubmitting(true);
     try {
       const result = await platformApi.login({ phone: identifier.trim() });
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...result.user, token: result.token }));
-      window.dispatchEvent(new Event("homeswift-auth"));
-      const redirectPath = searchParams.get("redirect") || "/user/workspace";
-      setFeedback("Đăng nhập thành công. Đang chuyển trang...");
-      setTimeout(() => navigate(redirectPath), 500);
+      const authUser = (result as any).user ?? result;
+      const authToken = (result as any).token;
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      setPendingLogin({ user: authUser, token: authToken });
+      setLoginOtp(otp);
+      setOtpPhone(authUser?.phone || identifier.trim());
+      setOtpCode("");
+      setOtpHint(`Mã OTP demo: ${otp}`);
+      setFeedbackType("success");
+      setFeedback("Mã OTP đã được gửi. Nhập OTP để đăng nhập.");
+      setIsOtpOpen(true);
     } catch (reason) {
+      setFeedbackType("error");
       setFeedback((reason as Error).message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const selectedProvinceName = provinceOptions.find((p) => String(p.code) === registerProvince)?.name ?? "";
+  const selectedDistrictName = districtOptions.find((d) => String(d.code) === registerDistrict)?.name ?? "";
+  const selectedWardName = wardOptions.find((w) => String(w.code) === registerWard)?.name ?? "";
+  const registerAddress = [selectedWardName, selectedDistrictName, selectedProvinceName].filter(Boolean).join(", ");
+
   const submitRegister = async (event: FormEvent) => {
     event.preventDefault();
     setFeedback("");
-    const phone = normalizedRegisterPhone;
-
     if (!canSubmitRegister) {
+      setRegisterTouched({ name: true, phone: true, email: true, city: true });
+      setFeedbackType("error");
       setFeedback("Vui lòng kiểm tra lại thông tin đăng ký.");
       return;
     }
-
     setIsSubmitting(true);
     try {
       const result = await platformApi.register({
         name: registerName.trim(),
-        phone,
+        phone: normalizedRegisterPhone,
         email: registerEmail.trim(),
-        city: registerCity
+        city: registerAddress,
+        province: selectedProvinceName,
+        district: selectedDistrictName,
+        ward: selectedWardName
       });
-      setOtpPhone(result.phone);
-      setOtpCode("");
-      setOtpHint(result.devOtp ? `Mã OTP demo: ${result.devOtp}` : "");
-      setIsOtpOpen(true);
-      setFeedback(result.message);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...result.user, token: result.token }));
+      window.dispatchEvent(new Event("homeswift-auth"));
+      setFeedbackType("success");
+      setFeedback("Đăng ký thành công. Đang chuyển trang...");
+      setTimeout(() => navigate("/"), 500);
     } catch (reason) {
+      setFeedbackType("error");
       setFeedback((reason as Error).message);
     } finally {
       setIsSubmitting(false);
@@ -192,22 +269,27 @@ export default function LoginPage() {
   const submitOtp = async (event: FormEvent) => {
     event.preventDefault();
     setFeedback("");
-
     if (!/^\d{6}$/.test(otpCode.trim())) {
+      setFeedbackType("error");
       setFeedback("Vui lòng nhập mã OTP gồm 6 số.");
       return;
     }
-
     setIsSubmitting(true);
     try {
-      const result = await platformApi.verifyRegisterOtp({ phone: otpPhone, otp: otpCode.trim() });
+      if (otpCode.trim() !== loginOtp || !pendingLogin) {
+        setFeedbackType("error");
+        setFeedback("Mã OTP không đúng.");
+        return;
+      }
+      const result = pendingLogin;
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...result.user, token: result.token }));
       window.dispatchEvent(new Event("homeswift-auth"));
-      const redirectPath = searchParams.get("redirect") || "/user/workspace";
+      setFeedbackType("success");
       setFeedback("Xác thực thành công. Đang chuyển trang...");
       setIsOtpOpen(false);
-      setTimeout(() => navigate(redirectPath), 500);
+      setTimeout(() => navigate("/"), 500);
     } catch (reason) {
+      setFeedbackType("error");
       setFeedback((reason as Error).message);
     } finally {
       setIsSubmitting(false);
@@ -220,9 +302,7 @@ export default function LoginPage() {
         <aside className="login-visual-panel">
           <span className="eyebrow">Tài khoản ViecNhanh</span>
           <h1>{mode === "login" ? "Chào mừng bạn quay lại." : "Bắt đầu quản lý dịch vụ dễ dàng hơn."}</h1>
-          <p>
-            Đăng nhập để đặt lịch, theo dõi tiến độ và nhận hỗ trợ nhanh cho mọi nhu cầu dịch vụ tại nhà.
-          </p>
+          <p>Đăng nhập để đặt lịch, theo dõi tiến độ và nhận hỗ trợ nhanh cho mọi nhu cầu dịch vụ tại nhà.</p>
           <div className="login-highlight-list">
             {loginHighlights.map((item) => (
               <span key={item}>
@@ -245,7 +325,9 @@ export default function LoginPage() {
           </Link>
 
           <div className="login-card-head">
-            <span className="login-card-icon">{mode === "login" ? <LockKeyhole size={22} /> : <UserPlus size={22} />}</span>
+            <span className="login-card-icon">
+              {mode === "login" ? <LockKeyhole size={22} /> : <UserPlus size={22} />}
+            </span>
             <div>
               <h2>{mode === "login" ? "Đăng nhập tài khoản" : "Tạo tài khoản mới"}</h2>
               <p>{mode === "login" ? "Nhập số điện thoại hoặc dùng tài khoản xã hội." : "Hoàn tất thông tin để nhận mã xác thực OTP."}</p>
@@ -258,10 +340,7 @@ export default function LoginPage() {
               type="button"
               role="tab"
               aria-selected={mode === "login"}
-              onClick={() => {
-                setMode("login");
-                setFeedback("");
-              }}
+              onClick={() => { setMode("login"); setFeedback(""); }}
             >
               Đăng nhập
             </button>
@@ -270,10 +349,7 @@ export default function LoginPage() {
               type="button"
               role="tab"
               aria-selected={mode === "register"}
-              onClick={() => {
-                setMode("register");
-                setFeedback("");
-              }}
+              onClick={() => { setMode("register"); setFeedback(""); }}
             >
               Đăng ký
             </button>
@@ -308,7 +384,6 @@ export default function LoginPage() {
                     autoComplete="username"
                   />
                 </label>
-
                 <button className="button primary login-submit" type="submit" disabled={isSubmitting}>
                   {isSubmitting ? "Đang gửi..." : "Gửi mã OTP"}
                 </button>
@@ -320,71 +395,98 @@ export default function LoginPage() {
                 Họ và tên
                 <input
                   value={registerName}
-                  onChange={(event) => {
-                    setRegisterName(event.target.value);
-                    setFeedback("");
-                  }}
+                  onChange={(event) => { setRegisterName(event.target.value); setFeedback(""); }}
+                  onBlur={() => touchRegisterField("name")}
                   placeholder="Nguyễn Văn A"
                   autoComplete="name"
-                  aria-invalid={Boolean(registerFieldErrors.name)}
+                  aria-invalid={showRegisterError("name")}
                 />
-                {registerFieldErrors.name ? <small className="field-error">{registerFieldErrors.name}</small> : null}
+                {showRegisterError("name") ? <small className="field-error">{registerFieldErrors.name}</small> : null}
               </label>
+
               <label>
                 Số điện thoại
                 <input
                   value={registerPhone}
-                  onChange={(event) => {
-                    setRegisterPhone(normalizePhone(event.target.value).slice(0, 10));
-                    setFeedback("");
-                  }}
+                  onChange={(event) => { setRegisterPhone(normalizePhone(event.target.value).slice(0, 10)); setFeedback(""); }}
+                  onBlur={() => touchRegisterField("phone")}
                   placeholder="0901 234 567"
                   autoComplete="tel"
                   inputMode="numeric"
                   maxLength={10}
-                  aria-invalid={Boolean(registerFieldErrors.phone)}
+                  aria-invalid={showRegisterError("phone")}
                 />
-                {registerFieldErrors.phone ? <small className="field-error">{registerFieldErrors.phone}</small> : null}
+                {showRegisterError("phone") ? <small className="field-error">{registerFieldErrors.phone}</small> : null}
               </label>
+
               <label>
                 Email
                 <input
                   value={registerEmail}
-                  onChange={(event) => {
-                    setRegisterEmail(event.target.value);
-                    setFeedback("");
-                  }}
-                  placeholder="email@ViecNhanh.vn"
+                  onChange={(event) => { setRegisterEmail(event.target.value); setFeedback(""); }}
+                  onBlur={() => touchRegisterField("email")}
+                  placeholder="email@viecnhanh.vn"
                   autoComplete="email"
-                  aria-invalid={Boolean(registerFieldErrors.email)}
+                  aria-invalid={showRegisterError("email")}
                 />
-                {registerFieldErrors.email ? <small className="field-error">{registerFieldErrors.email}</small> : null}
+                {showRegisterError("email") ? <small className="field-error">{registerFieldErrors.email}</small> : null}
               </label>
+
               <label>
                 Khu vực
                 <select
-                  value={registerCity}
-                  onChange={(event) => {
-                    setRegisterCity(event.target.value);
-                    setFeedback("");
-                  }}
+                  value={registerProvince}
+                  onChange={(event) => { setRegisterProvince(event.target.value); setFeedback(""); }}
+                  onBlur={() => touchRegisterField("city")}
                   required
-                  aria-invalid={Boolean(registerFieldErrors.city)}
+                  aria-invalid={showRegisterError("city")}
                 >
-                  <option value="" disabled>Chọn thành phố/khu vực</option>
-                  {cityOptions.map((city) => (
-                    <option key={city} value={city}>{city}</option>
+                  <option value="" disabled>Chọn tỉnh/thành phố</option>
+                  {provinceOptions.map((p) => (
+                    <option key={p.code} value={p.code}>{p.name}</option>
                   ))}
                 </select>
-                {registerFieldErrors.city ? <small className="field-error">{registerFieldErrors.city}</small> : null}
+                <select
+                  value={registerDistrict}
+                  onChange={(event) => { setRegisterDistrict(event.target.value); setFeedback(""); }}
+                  onBlur={() => touchRegisterField("city")}
+                  required
+                  disabled={!registerProvince}
+                  aria-invalid={showRegisterError("city")}
+                >
+                  <option value="" disabled>Chọn quận/huyện</option>
+                  {districtOptions.map((d) => (
+                    <option key={d.code} value={d.code}>{d.name}</option>
+                  ))}
+                </select>
+                <select
+                  value={registerWard}
+                  onChange={(event) => { setRegisterWard(event.target.value); setFeedback(""); }}
+                  onBlur={() => touchRegisterField("city")}
+                  required
+                  disabled={!registerDistrict}
+                  aria-invalid={showRegisterError("city")}
+                >
+                  <option value="" disabled>Chọn phường/xã</option>
+                  {wardOptions.map((w) => (
+                    <option key={w.code} value={w.code}>{w.name}</option>
+                  ))}
+                </select>
+                {showRegisterError("city") ? <small className="field-error">{registerFieldErrors.city}</small> : null}
+                {addressFeedback ? <small className="field-error">{addressFeedback}</small> : null}
               </label>
-              <button className="button primary login-submit" type="submit" disabled={isSubmitting || !canSubmitRegister}>
+
+              <button className="button primary login-submit" type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
               </button>
             </form>
           )}
 
-          {feedback ? <p className="feedback login-feedback">{feedback}</p> : null}
+          {feedback ? (
+            <p className={`feedback login-feedback ${feedbackType === "error" ? "error" : ""}`}>
+              {feedback}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -393,7 +495,7 @@ export default function LoginPage() {
           <form className="otp-modal" onSubmit={submitOtp}>
             <span className="login-card-icon"><Sparkles size={22} /></span>
             <h2 id="otp-title">Xác thực số điện thoại</h2>
-            <p>Mã OTP đã được gửi tới số {otpPhone}. Vui lòng nhập mã để hoàn tất đăng ký.</p>
+            <p>Mã OTP đã được gửi tới số {otpPhone}. Vui lòng nhập mã để tiếp tục.</p>
             {otpHint ? <strong>{otpHint}</strong> : null}
             <input
               value={otpCode}

@@ -25,7 +25,14 @@ const AUTH_STORAGE_KEY = "homeswift_user";
 
 function RequireUser({ children }: { children: ReactNode }) {
   const location = useLocation();
-  const isLoggedIn = Boolean(localStorage.getItem(AUTH_STORAGE_KEY));
+  const rawUser = localStorage.getItem(AUTH_STORAGE_KEY);
+  let isLoggedIn = false;
+
+  try {
+    isLoggedIn = Boolean(rawUser && JSON.parse(rawUser)?.token);
+  } catch {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  }
 
   if (!isLoggedIn) {
     const redirect = `${location.pathname}${location.search}`;

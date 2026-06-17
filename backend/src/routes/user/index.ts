@@ -7,6 +7,7 @@ import {
   createUserOrder,
   createWalletTransaction,
   acceptUserOrder,
+  cancelUserOrder,
   completeUserOrder,
   getUserHome,
   getUserJobDetail,
@@ -46,11 +47,13 @@ userRouter.get("/orders", asyncHandler(listUserOrders));
 userRouter.patch("/profile", asyncHandler(updateUserProfile));
 
 userRouter.post("/jobs", authorize("employer"), asyncHandler(createUserJob));
-userRouter.post("/applications", authorize("worker"), asyncHandler(createUserApplication));
-userRouter.post("/orders", authorize("employer"), asyncHandler(createUserOrder));
-userRouter.post("/orders/:orderCode/transferred", authorize("employer"), asyncHandler(markOrderTransferred));
-userRouter.post("/orders/:orderCode/accept", authorize("worker"), asyncHandler(acceptUserOrder));
-userRouter.post("/orders/:orderCode/request-completion", authorize("worker"), asyncHandler(requestOrderCompletion));
+userRouter.post("/applications", authorize("candidate"), asyncHandler(createUserApplication));
+userRouter.post("/orders", authorize("employer", "candidate"), asyncHandler(createUserOrder));
+userRouter.post("/orders/:orderCode/transferred", authorize("employer", "candidate"), asyncHandler(markOrderTransferred));
+userRouter.post("/orders/:orderCode/accept", authorize("candidate"), asyncHandler(acceptUserOrder));
+userRouter.post("/orders/:orderCode/request-completion", authorize("candidate"), asyncHandler(requestOrderCompletion));
+userRouter.post("/orders/:orderCode/cancel", authorize("employer", "candidate"), asyncHandler(cancelUserOrder));
+userRouter.post("/orders/:orderCode/complete", authorize("employer", "candidate"), asyncHandler(completeUserOrder));
 userRouter.post("/wallet/transactions", asyncHandler(createWalletTransaction));
 
 // Feature routes

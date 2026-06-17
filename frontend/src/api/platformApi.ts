@@ -22,13 +22,13 @@ export const platformApi = {
       method: "POST",
       body: JSON.stringify(payload)
     }),
-  register: (payload: { name: string; phone: string; email: string; city: string }) =>
-    apiFetch<{ message: string; phone: string; expiresInSeconds: number; devOtp?: string }>("/auth/register", {
+  verifyLoginOtp: (payload: { phone: string; otp: string }) =>
+    apiFetch<LoginResponse>("/auth/login/verify", {
       method: "POST",
       body: JSON.stringify(payload)
     }),
-  verifyRegisterOtp: (payload: { phone: string; otp: string }) =>
-    apiFetch<LoginResponse>("/auth/register/verify", {
+  register: (payload: { name: string; phone: string; email: string; city: string; province?: string; district?: string; ward?: string }) =>
+    apiFetch<LoginResponse>("/auth/register", {
       method: "POST",
       body: JSON.stringify(payload)
     }),
@@ -82,6 +82,10 @@ export const platformApi = {
     }),
   requestOrderCompletion: (orderCode: string) =>
     apiFetch<Order>(`/user/orders/${orderCode}/request-completion`, {
+      method: "POST"
+    }),
+  cancelUserOrder: (orderCode: string) =>
+    apiFetch<Order>(`/user/orders/${orderCode}/cancel`, {
       method: "POST"
     }),
   completeUserOrder: (orderCode: string) =>

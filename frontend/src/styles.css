@@ -17,9 +17,11 @@
   --shadow: 0 16px 32px rgba(16, 45, 74, 0.14);
   --page-max: 1180px;
   --page-gutter: clamp(20px, 5vw, 72px);
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
   color: var(--ink);
   background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
@@ -640,6 +642,10 @@ textarea {
   background: #fbfdff;
   padding: 13px 14px;
   outline: none;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
 }
 
 .filter-row input:focus,
@@ -660,6 +666,8 @@ textarea {
 }
 
 .form-grid label {
+  font-size: 14px;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
   display: grid;
   gap: 8px;
   color: #283546;
@@ -678,7 +686,10 @@ textarea {
 .button {
   border: 0;
   border-radius: 8px;
-  padding: 12px 18px;
+  padding: 12px600;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiasedpx;
   cursor: pointer;
   font-weight: 800;
 }
@@ -768,6 +779,7 @@ textarea {
   background:
     radial-gradient(circle at 50% 22%, rgba(37, 120, 211, 0.08), transparent 34%),
     linear-gradient(180deg, #f8fcff 0%, #edf5fb 100%);
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .login-card {
@@ -779,6 +791,7 @@ textarea {
   border-radius: 10px;
   background: white;
   box-shadow: 0 16px 34px rgba(16, 45, 74, 0.16);
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .login-logo {
@@ -786,6 +799,9 @@ textarea {
   margin-bottom: 18px;
   color: var(--blue);
   font-size: 38px;
+  font-weight: 850;
+  letter-spacing: -0.5px;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .social-button {
@@ -800,7 +816,8 @@ textarea {
   color: #18212c;
   cursor: pointer;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
   box-shadow: 0 4px 10px rgba(16, 45, 74, 0.12);
 }
 
@@ -811,7 +828,7 @@ textarea {
   height: 28px;
   margin-left: 10px;
   border-radius: 50%;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .google-button {
@@ -852,7 +869,9 @@ textarea {
   gap: 12px;
   margin: 8px 0;
   color: #4f5864;
-  font-size: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .login-divider::before,
@@ -880,32 +899,35 @@ textarea {
   color: #334155;
   background: transparent;
   cursor: pointer;
-  font-weight: 900;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 .auth-mode-tabs button.active {
   color: #ffffff;
   background: #1977d2;
   box-shadow: 0 6px 14px rgba(25, 119, 210, 0.22);
-}
-
-.login-form {
-  display: grid;
-  gap: 16px;
+  font-weight: 600;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .register-form label {
   display: grid;
   gap: 8px;
   color: #111827;
-  font-weight: 800;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .field-error {
   color: #b43434;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.35;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .login-form input[aria-invalid="true"],
@@ -937,13 +959,25 @@ textarea {
 .otp-modal h2 {
   margin: 0;
   color: #000000;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+.otp-modal h2 {
+  margin: 0;
+  color: #000000;
   font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .otp-modal p {
   margin: 0;
   color: #4b5563;
   line-height: 1.45;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .otp-modal > strong {
@@ -951,11 +985,17 @@ textarea {
   border-radius: 8px;
   color: #176fbd;
   background: #e7f3ff;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .otp-modal input {
   width: 100%;
   height: 48px;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
   border: 1px solid #cfd9e2;
   border-radius: 8px;
   padding: 0 14px;
@@ -978,8 +1018,8 @@ textarea {
   border: 1px solid #9daab6;
   border-radius: 8px;
   overflow: hidden;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
-
 .phone-field input {
   border: 0;
   border-left: 1px solid #cfd9e2;
@@ -2691,7 +2731,9 @@ textarea {
   position: relative;
   padding-left: 28px;
   color: #0f172a;
-  font-size: 18px;
+  font-size: 16px;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  font-weight: 500;
 }
 
 .check-list li::before {
@@ -2724,6 +2766,9 @@ textarea {
   margin: 0;
   color: #000000;
   font-size: 27px;
+  font-weight: 750;
+  letter-spacing: -0.3px;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .booking-quantity {
@@ -2736,7 +2781,9 @@ textarea {
 .booking-quantity > span,
 .booking-card p {
   color: #111827;
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .booking-quantity div {
@@ -2755,8 +2802,9 @@ textarea {
   color: #1977d2;
   background: #e7f3ff;
   cursor: pointer;
-  font-size: 22px;
-  font-weight: 900;
+  font-size: 20px;
+  font-weight: 600;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .booking-card p {
@@ -2769,7 +2817,9 @@ textarea {
   display: grid;
   gap: 8px;
   color: #111827;
-  font-weight: 800;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .booking-machine-type select {
@@ -2780,11 +2830,18 @@ textarea {
   padding: 0 12px;
   color: #111827;
   background: #ffffff;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
 }
 
 .booking-card small {
   color: #64748b;
   line-height: 1.45;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .booking-card .button {
@@ -2892,8 +2949,9 @@ textarea {
   padding: 18px 0;
   cursor: pointer;
   color: #111827;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .detail-faq summary::after {
@@ -2903,22 +2961,25 @@ textarea {
 .detail-faq p {
   margin: 0 0 18px;
   color: #475569;
-}
-
-.booking-page {
-  min-height: calc(100vh - 78px);
-  background: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  line-height: 1.5;
 }
 
 .booking-shell {
   padding: 34px clamp(32px, 7vw, 120px) 42px;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .booking-shell h1 {
   margin: 0 0 38px;
   color: #000000;
   font-size: clamp(34px, 3.5vw, 46px);
+  font-weight: 800;
   line-height: 1.12;
+  letter-spacing: -0.5px;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .booking-layout {
@@ -2937,6 +2998,9 @@ textarea {
   margin: 0;
   color: #000000;
   font-size: 30px;
+  font-weight: 750;
+  letter-spacing: -0.3px;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .booking-step {
@@ -2946,12 +3010,16 @@ textarea {
   border: 1px solid #d3dce5;
   border-radius: 12px;
   background: #ffffff;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .booking-step h3 {
   margin: 0;
   color: #000000;
   font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .booking-field-grid {
@@ -2965,8 +3033,9 @@ textarea {
   display: grid;
   gap: 8px;
   color: #000000;
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .booking-field-grid select,
@@ -2983,6 +3052,10 @@ textarea {
   background: #ffffff;
   color: #111827;
   outline: none;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
 }
 
 .booking-field-grid select:focus,
