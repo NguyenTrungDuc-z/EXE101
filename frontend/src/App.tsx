@@ -1,0 +1,71 @@
+import type { ReactNode } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import AdminLayout from "./layouts/AdminLayout";
+import UserLayout from "./layouts/UserLayout";
+import AdminCandidatesPage from "./pages/admin/AdminCandidatesPage";
+import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
+import AdminEmployersPage from "./pages/admin/AdminEmployersPage";
+import AdminJobsPage from "./pages/admin/AdminJobsPage";
+import AdminOperationsPage from "./pages/admin/AdminOperationsPage";
+import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import AboutPage from "./pages/user/AboutPage";
+import EmployerPostJobPage from "./pages/user/EmployerPostJobPage";
+import HelpPage from "./pages/user/HelpPage";
+import LoginPage from "./pages/user/LoginPage";
+import PartnerPage from "./pages/user/PartnerPage";
+import UserHomePage from "./pages/user/UserHomePage";
+import UserJobsPage from "./pages/user/UserJobsPage";
+import UserWorkspacePage from "./pages/user/UserWorkspacePage";
+import OrderDetailPage from "./pages/user/OrderDetailPage";
+import WalletPage from "./pages/user/WalletPage";
+import FloatingChatWidget from "./components/FloatingChatWidget";
+
+const AUTH_STORAGE_KEY = "homeswift_user";
+
+function RequireUser({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const isLoggedIn = Boolean(localStorage.getItem(AUTH_STORAGE_KEY));
+
+  if (!isLoggedIn) {
+    const redirect = `${location.pathname}${location.search}`;
+    return <Navigate to={`/login?redirect=${encodeURIComponent(redirect)}`} replace />;
+  }
+
+  return children;
+}
+
+export default function App() {
+  return (
+    <>
+      <Routes>
+        <Route element={<UserLayout />}>
+          <Route path="/" element={<UserHomePage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/user/jobs" element={<UserJobsPage />} />
+          <Route path="/user/workspace" element={<UserWorkspacePage />} />
+          <Route path="/user/orders/:orderCode" element={<RequireUser><OrderDetailPage /></RequireUser>} />
+          <Route path="/user/wallet" element={<RequireUser><WalletPage /></RequireUser>} />
+          <Route path="/booking" element={<RequireUser><EmployerPostJobPage /></RequireUser>} />
+          <Route path="/partner" element={<PartnerPage />} />
+          <Route path="/user/post-job" element={<Navigate to="/partner" replace />} />
+          <Route path="/help" element={<HelpPage />} />
+          <Route path="/login" element={<LoginPage />} />
+        </Route>
+
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="jobs" element={<AdminJobsPage />} />
+          <Route path="employers" element={<AdminEmployersPage />} />
+          <Route path="candidates" element={<AdminCandidatesPage />} />
+          <Route path="operations" element={<AdminOperationsPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+        </Route>
+
+        <Route path="/home" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+      <FloatingChatWidget />
+    </>
+  );
+}

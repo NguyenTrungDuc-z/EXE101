@@ -1,0 +1,50 @@
+[
+  {
+    "code": "CAT-AC",
+    "name": "Ve sinh may lanh",
+    "slug": "ve-sinh-may-lanh",
+    "icon": "fan",
+    "serviceType": "scheduled",
+    "averageBudgetLabel": "150k - 500k"
+  },
+  {
+    "code": "CAT-CLEAN",
+    "name": "Ve sinh nha cua",
+    "slug": "ve-sinh-nha-cua",
+    "icon": "sparkles",
+    "serviceType": "hourly",
+    "averageBudgetLabel": "180k - 900k"
+  },
+  {
+    "code": "CAT-PLUMB",
+    "name": "Sua dien nuoc",
+    "slug": "sua-dien-nuoc",
+    "icon": "wrench",
+    "serviceType": "urgent",
+    "averageBudgetLabel": "180k - 700k"
+  },
+  {
+    "code": "CAT-SOFA",
+    "name": "Ve sinh sofa nem rem",
+    "slug": "ve-sinh-sofa-nem-rem",
+    "icon": "sofa",
+    "serviceType": "scheduled",
+    "averageBudgetLabel": "250k - 900k"
+  },
+  {
+    "code": "CAT-PEST",
+    "name": "Diet con trung",
+    "slug": "diet-con-trung",
+    "icon": "shield",
+    "serviceType": "scheduled",
+    "averageBudgetLabel": "350k - 1200k"
+  },
+  {
+    "code": "CAT-LAUNDRY",
+    "name": "Giat ui tai nha",
+    "slug": "giat-ui-tai-nha",
+    "icon": "shirt",
+    "serviceType": "scheduled",
+    "averageBudgetLabel": "80k - 300k"
+  }
+]

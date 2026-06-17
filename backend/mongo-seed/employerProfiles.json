@@ -1,0 +1,18 @@
+[
+  {
+    "userCode": "USR-EMP-001",
+    "companyName": "Viec Nhanh Home Services",
+    "kycStatus": "verified",
+    "serviceAreas": ["District 1", "District 3", "Binh Thanh"],
+    "packageName": "growth",
+    "walletBalance": 5400000
+  },
+  {
+    "userCode": "USR-EMP-002",
+    "companyName": "Thanh Cong Utility",
+    "kycStatus": "review",
+    "serviceAreas": ["District 7", "Nha Be"],
+    "packageName": "starter",
+    "walletBalance": 1200000
+  }
+]

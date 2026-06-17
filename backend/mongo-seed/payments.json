@@ -1,0 +1,24 @@
+[
+  {
+    "code": "PAY-5001",
+    "orderCode": "ORD-7001",
+    "payerCode": "USR-EMP-001",
+    "payeeCode": "USR-CAN-001",
+    "type": "job_payment",
+    "status": "paid",
+    "amount": 350000,
+    "method": "bank_transfer",
+    "createdAt": "2026-05-14T10:00:00.000Z"
+  },
+  {
+    "code": "PAY-5002",
+    "orderCode": "ORD-7002",
+    "payerCode": "USR-EMP-001",
+    "payeeCode": "USR-CAN-002",
+    "type": "job_payment",
+    "status": "pending",
+    "amount": 420000,
+    "method": "wallet",
+    "createdAt": "2026-05-14T10:30:00.000Z"
+  }
+]

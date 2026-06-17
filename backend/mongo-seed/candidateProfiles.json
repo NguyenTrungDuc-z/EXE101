@@ -1,0 +1,47 @@
+[
+  {
+    "userCode": "USR-CAN-001",
+    "headline": "Ky thuat dieu hoa va dien nuoc",
+    "skills": ["ve sinh may lanh", "bom gas", "sua dien nuoc", "bao tri"],
+    "rating": 4.9,
+    "verified": true,
+    "completedJobs": 84,
+    "availability": "available"
+  },
+  {
+    "userCode": "USR-CAN-002",
+    "headline": "Chuyen vien ve sinh nha cua",
+    "skills": ["ve sinh nha", "tong ve sinh", "giat ui", "home care"],
+    "rating": 4.8,
+    "verified": true,
+    "completedJobs": 67,
+    "availability": "available"
+  },
+  {
+    "userCode": "USR-CAN-003",
+    "headline": "Tho ve sinh sofa, nem va tham",
+    "skills": ["ve sinh sofa", "ve sinh nem", "ve sinh tham", "may phun hut"],
+    "rating": 4.7,
+    "verified": true,
+    "completedJobs": 49,
+    "availability": "busy"
+  },
+  {
+    "userCode": "USR-CAN-004",
+    "headline": "Ky thuat diet con trung nha o",
+    "skills": ["diet gian", "diet kien", "diet muoi", "xu ly con trung"],
+    "rating": 4.6,
+    "verified": true,
+    "completedJobs": 38,
+    "availability": "available"
+  },
+  {
+    "userCode": "USR-CAN-005",
+    "headline": "Tho sua ong nuoc va thiet bi ve sinh",
+    "skills": ["sua ong nuoc", "thay siphon", "thay voi", "thong tac nhe"],
+    "rating": 4.8,
+    "verified": true,
+    "completedJobs": 56,
+    "availability": "available"
+  }
+]

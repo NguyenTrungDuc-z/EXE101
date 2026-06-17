@@ -1,0 +1,419 @@
+import type { FormEvent } from "react";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { CheckCircle2, LockKeyhole, MapPin, ShieldCheck, Smartphone, Sparkles, UserPlus } from "lucide-react";
+import { platformApi } from "../../api/platformApi";
+import FacebookLogin from "../../auth/FacebookLogin";
+import GoogleLogin from "../../auth/GoogleLogin";
+
+const AUTH_STORAGE_KEY = "homeswift_user";
+const FB_APP_ID = "1969315983727979";
+const GOOGLE_CLIENT_ID = "221668802735-ps1j4hoftkj11obo4g4d0eod36ljc39h.apps.googleusercontent.com";
+const cityOptions = ["Hà Nội", "TP. Hồ Chí Minh", "Đà Nẵng", "Hải Phòng", "Cần Thơ", "Bình Dương", "Đồng Nai", "Khánh Hòa"];
+
+const loginHighlights = [
+  "Đặt lịch và theo dõi đơn dịch vụ trong một nơi",
+  "Thông tin tài khoản được bảo vệ bằng xác thực OTP",
+  "Dễ dàng quản lý lịch sử dịch vụ và hỗ trợ"
+];
+
+function normalizePhone(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function isValidVietnamPhone(value: string) {
+  return /^0(3[2-9]|5[2689]|7[06789]|8[1-9]|9[0-46-9])\d{7}$/.test(value);
+}
+
+function isValidRegistrationEmail(value: string) {
+  const email = value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return false;
+  }
+
+  const domain = email.split("@")[1];
+  if (!domain || domain === "gamil.com") {
+    return false;
+  }
+
+  return domain === "gmail.com" || /\.(com|com\.vn|vn|edu|edu\.vn|ac\.vn|org|org\.vn)$/i.test(domain);
+}
+
+export default function LoginPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [identifier, setIdentifier] = useState("");
+  const [registerName, setRegisterName] = useState("");
+  const [registerPhone, setRegisterPhone] = useState("");
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerCity, setRegisterCity] = useState("");
+  const [otpPhone, setOtpPhone] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpHint, setOtpHint] = useState("");
+  const [isOtpOpen, setIsOtpOpen] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fbLogin, setFbLogin] = useState<FacebookLogin | null>(null);
+  const normalizedRegisterPhone = normalizePhone(registerPhone);
+  const registerFieldErrors = {
+    name: registerName.trim() ? "" : "Họ và tên không được bỏ trống.",
+    phone: !normalizedRegisterPhone
+      ? "Số điện thoại không được bỏ trống."
+      : isValidVietnamPhone(normalizedRegisterPhone)
+        ? ""
+        : "Số điện thoại phải gồm 10 số, bắt đầu bằng 0 và đúng đầu số Việt Nam.",
+    email: !registerEmail.trim()
+      ? "Email không được bỏ trống."
+      : isValidRegistrationEmail(registerEmail)
+        ? ""
+        : "Email phải là gmail.com hoặc email công ty/trường học hợp lệ.",
+    city: registerCity ? "" : "Vui lòng chọn thành phố/khu vực."
+  };
+  const canSubmitRegister =
+    !registerFieldErrors.name && !registerFieldErrors.phone && !registerFieldErrors.email && !registerFieldErrors.city;
+
+  useEffect(() => {
+    const fbLoginInstance = new FacebookLogin(FB_APP_ID);
+    setFbLogin(fbLoginInstance);
+  }, []);
+
+  useEffect(() => {
+    const googleLoginInstance = new GoogleLogin(GOOGLE_CLIENT_ID);
+    const redirectPath = searchParams.get("redirect") || "/user/workspace";
+
+    googleLoginInstance.setOnLoginSuccess(async (authResponse) => {
+      try {
+        const result = await platformApi.loginWithGoogle({ credential: authResponse.credential });
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...result.user, token: result.token }));
+        window.dispatchEvent(new Event("homeswift-auth"));
+        setFeedback("Đăng nhập Google thành công!");
+        setTimeout(() => navigate(redirectPath), 500);
+      } catch (error) {
+        setFeedback((error as Error).message);
+      }
+    });
+
+    googleLoginInstance.setOnLoginError((error) => {
+      setFeedback(error.message);
+    });
+
+    setTimeout(() => {
+      googleLoginInstance.renderButton("google-signin-button");
+    }, 500);
+  }, []);
+
+  useEffect(() => {
+    const googleButton = document.getElementById("google-signin-button");
+    if (googleButton) {
+      googleButton.style.display = mode === "login" ? "flex" : "none";
+    }
+  }, [mode]);
+
+  const handleFacebookLogin = async () => {
+    if (!fbLogin) {
+      setFeedback("Facebook SDK đang khởi tạo, vui lòng thử lại sau giây lát.");
+      return;
+    }
+    setFeedback("");
+    setIsSubmitting(true);
+    try {
+      const authResponse = await fbLogin.login();
+      const result = await platformApi.loginWithFacebook({
+        accessToken: authResponse.accessToken,
+        userID: authResponse.userID
+      });
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...result.user, token: result.token }));
+      window.dispatchEvent(new Event("homeswift-auth"));
+      const redirectPath = searchParams.get("redirect") || "/user/workspace";
+      setFeedback("Đăng nhập Facebook thành công!");
+      setTimeout(() => navigate(redirectPath), 500);
+    } catch (error) {
+      setFeedback((error as Error).message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const submitLogin = async (event: FormEvent) => {
+    event.preventDefault();
+    setFeedback("");
+
+    if (!identifier.trim()) {
+      setFeedback("Vui lòng nhập số điện thoại.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await platformApi.login({ phone: identifier.trim() });
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...result.user, token: result.token }));
+      window.dispatchEvent(new Event("homeswift-auth"));
+      const redirectPath = searchParams.get("redirect") || "/user/workspace";
+      setFeedback("Đăng nhập thành công. Đang chuyển trang...");
+      setTimeout(() => navigate(redirectPath), 500);
+    } catch (reason) {
+      setFeedback((reason as Error).message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const submitRegister = async (event: FormEvent) => {
+    event.preventDefault();
+    setFeedback("");
+    const phone = normalizedRegisterPhone;
+
+    if (!canSubmitRegister) {
+      setFeedback("Vui lòng kiểm tra lại thông tin đăng ký.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await platformApi.register({
+        name: registerName.trim(),
+        phone,
+        email: registerEmail.trim(),
+        city: registerCity
+      });
+      setOtpPhone(result.phone);
+      setOtpCode("");
+      setOtpHint(result.devOtp ? `Mã OTP demo: ${result.devOtp}` : "");
+      setIsOtpOpen(true);
+      setFeedback(result.message);
+    } catch (reason) {
+      setFeedback((reason as Error).message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const submitOtp = async (event: FormEvent) => {
+    event.preventDefault();
+    setFeedback("");
+
+    if (!/^\d{6}$/.test(otpCode.trim())) {
+      setFeedback("Vui lòng nhập mã OTP gồm 6 số.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await platformApi.verifyRegisterOtp({ phone: otpPhone, otp: otpCode.trim() });
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...result.user, token: result.token }));
+      window.dispatchEvent(new Event("homeswift-auth"));
+      const redirectPath = searchParams.get("redirect") || "/user/workspace";
+      setFeedback("Xác thực thành công. Đang chuyển trang...");
+      setIsOtpOpen(false);
+      setTimeout(() => navigate(redirectPath), 500);
+    } catch (reason) {
+      setFeedback((reason as Error).message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <section className="login-shell">
+      <div className="login-layout">
+        <aside className="login-visual-panel">
+          <span className="eyebrow">Tài khoản ViecNhanh</span>
+          <h1>{mode === "login" ? "Chào mừng bạn quay lại." : "Bắt đầu quản lý dịch vụ dễ dàng hơn."}</h1>
+          <p>
+            Đăng nhập để đặt lịch, theo dõi tiến độ và nhận hỗ trợ nhanh cho mọi nhu cầu dịch vụ tại nhà.
+          </p>
+          <div className="login-highlight-list">
+            {loginHighlights.map((item) => (
+              <span key={item}>
+                <CheckCircle2 size={18} />
+                {item}
+              </span>
+            ))}
+          </div>
+          <div className="login-trust-strip" aria-label="Cam kết tài khoản">
+            <span><ShieldCheck size={18} /> Bảo mật</span>
+            <span><Smartphone size={18} /> OTP nhanh</span>
+            <span><MapPin size={18} /> Khu vực rõ ràng</span>
+          </div>
+        </aside>
+
+        <div className="login-card">
+          <Link to="/" className="login-logo">
+            <span className="brand-icon" aria-hidden="true" />
+            <strong>Viec<span>Nhanh</span></strong>
+          </Link>
+
+          <div className="login-card-head">
+            <span className="login-card-icon">{mode === "login" ? <LockKeyhole size={22} /> : <UserPlus size={22} />}</span>
+            <div>
+              <h2>{mode === "login" ? "Đăng nhập tài khoản" : "Tạo tài khoản mới"}</h2>
+              <p>{mode === "login" ? "Nhập số điện thoại hoặc dùng tài khoản xã hội." : "Hoàn tất thông tin để nhận mã xác thực OTP."}</p>
+            </div>
+          </div>
+
+          <div className="auth-mode-tabs" role="tablist" aria-label="Chọn đăng nhập hoặc đăng ký">
+            <button
+              className={mode === "login" ? "active" : ""}
+              type="button"
+              role="tab"
+              aria-selected={mode === "login"}
+              onClick={() => {
+                setMode("login");
+                setFeedback("");
+              }}
+            >
+              Đăng nhập
+            </button>
+            <button
+              className={mode === "register" ? "active" : ""}
+              type="button"
+              role="tab"
+              aria-selected={mode === "register"}
+              onClick={() => {
+                setMode("register");
+                setFeedback("");
+              }}
+            >
+              Đăng ký
+            </button>
+          </div>
+
+          {mode === "login" ? (
+            <>
+              <div
+                id="google-signin-button"
+                style={{ width: "100%", minHeight: "40px", display: "flex", justifyContent: "center" }}
+              />
+
+              <button
+                className="social-button facebook-button"
+                type="button"
+                onClick={handleFacebookLogin}
+                disabled={isSubmitting}
+              >
+                <span aria-hidden="true">f</span>
+                Tiếp tục với Facebook
+              </button>
+
+              <div className="login-divider">hoặc dùng số điện thoại</div>
+
+              <form onSubmit={submitLogin} className="login-form">
+                <label className="phone-field">
+                  <span className="country-code">+84</span>
+                  <input
+                    value={identifier}
+                    onChange={(event) => setIdentifier(event.target.value)}
+                    placeholder="Nhập số điện thoại"
+                    autoComplete="username"
+                  />
+                </label>
+
+                <button className="button primary login-submit" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Đang gửi..." : "Gửi mã OTP"}
+                </button>
+              </form>
+            </>
+          ) : (
+            <form onSubmit={submitRegister} className="login-form register-form">
+              <label>
+                Họ và tên
+                <input
+                  value={registerName}
+                  onChange={(event) => {
+                    setRegisterName(event.target.value);
+                    setFeedback("");
+                  }}
+                  placeholder="Nguyễn Văn A"
+                  autoComplete="name"
+                  aria-invalid={Boolean(registerFieldErrors.name)}
+                />
+                {registerFieldErrors.name ? <small className="field-error">{registerFieldErrors.name}</small> : null}
+              </label>
+              <label>
+                Số điện thoại
+                <input
+                  value={registerPhone}
+                  onChange={(event) => {
+                    setRegisterPhone(normalizePhone(event.target.value).slice(0, 10));
+                    setFeedback("");
+                  }}
+                  placeholder="0901 234 567"
+                  autoComplete="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  aria-invalid={Boolean(registerFieldErrors.phone)}
+                />
+                {registerFieldErrors.phone ? <small className="field-error">{registerFieldErrors.phone}</small> : null}
+              </label>
+              <label>
+                Email
+                <input
+                  value={registerEmail}
+                  onChange={(event) => {
+                    setRegisterEmail(event.target.value);
+                    setFeedback("");
+                  }}
+                  placeholder="email@ViecNhanh.vn"
+                  autoComplete="email"
+                  aria-invalid={Boolean(registerFieldErrors.email)}
+                />
+                {registerFieldErrors.email ? <small className="field-error">{registerFieldErrors.email}</small> : null}
+              </label>
+              <label>
+                Khu vực
+                <select
+                  value={registerCity}
+                  onChange={(event) => {
+                    setRegisterCity(event.target.value);
+                    setFeedback("");
+                  }}
+                  required
+                  aria-invalid={Boolean(registerFieldErrors.city)}
+                >
+                  <option value="" disabled>Chọn thành phố/khu vực</option>
+                  {cityOptions.map((city) => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+                {registerFieldErrors.city ? <small className="field-error">{registerFieldErrors.city}</small> : null}
+              </label>
+              <button className="button primary login-submit" type="submit" disabled={isSubmitting || !canSubmitRegister}>
+                {isSubmitting ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
+              </button>
+            </form>
+          )}
+
+          {feedback ? <p className="feedback login-feedback">{feedback}</p> : null}
+        </div>
+      </div>
+
+      {isOtpOpen ? (
+        <div className="otp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="otp-title">
+          <form className="otp-modal" onSubmit={submitOtp}>
+            <span className="login-card-icon"><Sparkles size={22} /></span>
+            <h2 id="otp-title">Xác thực số điện thoại</h2>
+            <p>Mã OTP đã được gửi tới số {otpPhone}. Vui lòng nhập mã để hoàn tất đăng ký.</p>
+            {otpHint ? <strong>{otpHint}</strong> : null}
+            <input
+              value={otpCode}
+              onChange={(event) => setOtpCode(normalizePhone(event.target.value).slice(0, 6))}
+              placeholder="Nhập mã OTP"
+              inputMode="numeric"
+              maxLength={6}
+              autoFocus
+            />
+            <div>
+              <button className="button secondary" type="button" onClick={() => setIsOtpOpen(false)} disabled={isSubmitting}>
+                Hủy
+              </button>
+              <button className="button primary" type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Đang xác thực..." : "Xác thực OTP"}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+    </section>
+  );
+}

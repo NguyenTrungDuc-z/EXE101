@@ -1,0 +1,26 @@
+[
+  {
+    "code": "APP-9001",
+    "jobCode": "JOB-2601",
+    "candidateCode": "USR-CAN-001",
+    "status": "shortlisted",
+    "note": "San sang co mat trong 1 gio",
+    "appliedAt": "2026-05-13T16:00:00.000Z"
+  },
+  {
+    "code": "APP-9002",
+    "jobCode": "JOB-2601",
+    "candidateCode": "USR-CAN-002",
+    "status": "review",
+    "note": "Co doi 2 nguoi",
+    "appliedAt": "2026-05-13T17:10:00.000Z"
+  },
+  {
+    "code": "APP-9003",
+    "jobCode": "JOB-2602",
+    "candidateCode": "USR-CAN-002",
+    "status": "new",
+    "note": "Ranh ca sang",
+    "appliedAt": "2026-05-14T06:45:00.000Z"
+  }
+]
