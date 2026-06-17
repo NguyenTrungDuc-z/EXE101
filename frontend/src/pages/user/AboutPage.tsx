@@ -1,10 +1,4 @@
 import { Award, CheckCircle2, HeartHandshake, Lightbulb, ShieldCheck, Sparkles, Target, Users } from "lucide-react";
-import LinhImg from "../../assets/team/ling.jpg";
-import HungImg from "../../assets/team/Hungs.jpg";
-import DuyenImg from "../../assets/team/Duye.jpg";
-import ThuyImg from "../../assets/team/Thuyf.jpg";
-import DucImg from "../../assets/team/duc.jpg";
-import DuyAnh from "../../assets/team/danh.jpg";
 
 const coreValues = [
   { icon: ShieldCheck, title: "Tin cậy", description: "Giá cố định minh bạch, quy trình rõ ràng và bảo vệ quyền lợi khách hàng." },
@@ -13,13 +7,16 @@ const coreValues = [
   { icon: Lightbulb, title: "Sáng tạo", description: "Liên tục cải tiến trải nghiệm đặt dịch vụ, theo dõi đơn và chăm sóc sau dịch vụ." }
 ];
 
+// Sử dụng link ảnh online ngẫu nhiên chất lượng cao để làm avatar mặc định không bị lỗi
+const defaultAvatar = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80";
+
 const leaders = [
-  { name: "Nguyễn Vũ Ngọc Linh", role: "Founder & Marketing Lead", image: LinhImg },
-  { name: "Nguyễn Việt Hùng", role: "Co-founder & Growth Marketing", image: HungImg },
-  { name: "Phạm Thị Duyên", role: "Content Marketing & Branding", image: DuyenImg },
-  { name: "Đào Thanh Thùy", role: "Customer Success & Operations", image: ThuyImg },
-  { name: "Nguyễn Trung Đức", role: "FullStack Developer", image: DucImg },
-  { name: "Hoàng Duy Anh", role: "FullStack Developer", image: DuyAnh }
+  { name: "Nguyễn Vũ Ngọc Linh", role: "Founder & Marketing Lead", image: defaultAvatar },
+  { name: "Nguyễn Việt Hùng", role: "Co-founder & Growth Marketing", image: defaultAvatar },
+  { name: "Phạm Thị Duyên", role: "Content Marketing & Branding", image: defaultAvatar },
+  { name: "Đào Thanh Thùy", role: "Customer Success & Operations", image: defaultAvatar },
+  { name: "Nguyễn Trung Đức", role: "FullStack Developer", image: defaultAvatar },
+  { name: "Hoàng Duy Anh", role: "FullStack Developer", image: defaultAvatar }
 ];
 
 const numbers = [
@@ -27,8 +24,6 @@ const numbers = [
   { value: "4 bước", label: "quy trình đặt dịch vụ rõ ràng" },
   { value: "100%", label: "đối tác cần được xác minh" }
 ];
-
-const partners = ["ViecNhanh", "VIETNANK", "Banet", "Bảo hiểm Hà"];
 
 export default function AboutPage() {
   return (
@@ -65,7 +60,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="about-mission-panel">
+      <section className="about-mission-panel" aria-label="Định hướng">
         <div className="about-section-head">
           <span className="eyebrow">Định hướng</span>
           <h2>Sứ mệnh & Tầm nhìn</h2>
@@ -84,7 +79,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="about-core-values">
+      <section className="about-core-values" aria-label="Văn hóa vận hành">
         <div className="about-section-head">
           <span className="eyebrow">Văn hóa vận hành</span>
           <h2>Giá trị cốt lõi</h2>
@@ -100,7 +95,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="about-leadership">
+      <section className="about-leadership" aria-label="Con người">
         <div className="about-section-head">
           <span className="eyebrow">Con người</span>
           <h2>Đội ngũ phát triển</h2>
@@ -115,8 +110,6 @@ export default function AboutPage() {
           ))}
         </div>
       </section>
-
-     
     </section>
   );
 }
