@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { LayoutDashboard, ShoppingBag, Wallet, User, HelpCircle, ShieldCheck } from "lucide-react";
@@ -351,7 +351,7 @@ export default function UserWorkspacePage() {
     try {
       const res = await platformApi.createMaterialList({
         orderCode: selectedOrder.rawOrder.code,
-        candidateCode: user.code ?? "",
+        workerCode: user.code ?? "",
         items: draftMaterials,
         note: ""
       });

@@ -118,6 +118,7 @@ export type Order = {
   jobCode: string;
   employerCode: string;
   workerCode: string;
+  candidateCode?: string;
   status: string;
   scheduledAt: string;
   totalAmount: number;
