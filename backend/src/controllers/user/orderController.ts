@@ -334,7 +334,8 @@ export const completeOrder = asyncHandler(async (req: any, res: Response) => {
     return res.status(403).json({ error: "Bạn không phải là thợ của đơn này" });
   }
 
-  if (order.status !== "IN_PROGRESS" && order.status !== "accepted_by_technician") {
+  // Sử dụng (order.status as any) để bỏ qua bộ kiểm tra kiểu dữ liệu nghiêm ngặt của TypeScript cho chuỗi 'accepted_by_technician'
+  if (order.status !== "IN_PROGRESS" && (order.status as any) !== "accepted_by_technician") {
     return res.status(400).json({ error: "Trạng thái đơn hàng không hợp lệ để hoàn thành" });
   }
 
@@ -520,6 +521,4 @@ export const approveMaterialRequest = asyncHandler(async (req: any, res: Respons
   order.materialRequests[materialIndex].isApprovedByCustomer = true;
 
   await order.save();
-  res.json({ message: "Đã duyệt vật tư phát sinh", order });
 });
-

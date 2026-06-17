@@ -1,8 +1,8 @@
 import { Award, CheckCircle2, HeartHandshake, Lightbulb, ShieldCheck, Sparkles, Target, Users } from "lucide-react";
 import LinhImg from "../../assets/team/ling.jpg";
-import HungImg from "../../assets/team/hung.jpg";
-import DuyenImg from "../../assets/team/duyen.jpg";
-import ThuyImg from "../../assets/team/thuy.jpg";
+import HungImg from "../../assets/team/Hungs.jpg";
+import DuyenImg from "../../assets/team/Duye.jpg";
+import ThuyImg from "../../assets/team/Thuyf.jpg";
 import DucImg from "../../assets/team/duc.jpg";
 import DuyAnh from "../../assets/team/danh.jpg";
 
