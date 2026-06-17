@@ -13,14 +13,14 @@ const coreValues = [
   { icon: Lightbulb, title: "Sáng tạo", description: "Liên tục cải tiến trải nghiệm đặt dịch vụ, theo dõi đơn và chăm sóc sau dịch vụ." }
 ];
 
-const leaders = [
-  { name: "Nguyễn Vũ Ngọc Linh", role: "Founder & Marketing Lead", image: LinhImg },
-  { name: "Nguyễn Việt Hùng", role: "Co-founder & Growth Marketing", image: HungImg },
-  { name: "Phạm Thị Duyên", role: "Content Marketing & Branding", image: DuyenImg },
-  { name: "Đào Thanh Thùy", role: "Customer Success & Operations", image: ThuyImg },
-  { name: "Nguyễn Trung Đức", role: "FullStack Developer", image: DucImg },
-  { name: "Hoàng Duy Anh", role: "FullStack Developer", image: DuyAnh }
-];
+// const leaders = [
+//   { name: "Nguyễn Vũ Ngọc Linh", role: "Founder & Marketing Lead", image: LinhImg },
+//   { name: "Nguyễn Việt Hùng", role: "Co-founder & Growth Marketing", image: HungImg },
+//   { name: "Phạm Thị Duyên", role: "Content Marketing & Branding", image: DuyenImg },
+//   { name: "Đào Thanh Thùy", role: "Customer Success & Operations", image: ThuyImg },
+//   { name: "Nguyễn Trung Đức", role: "FullStack Developer", image: DucImg },
+//   { name: "Hoàng Duy Anh", role: "FullStack Developer", image: DuyAnh }
+// ];
 
 const numbers = [
   { value: "24/7", label: "kênh hỗ trợ khách hàng" },
@@ -100,7 +100,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="about-leadership">
+      {/* <section className="about-leadership">
         <div className="about-section-head">
           <span className="eyebrow">Con người</span>
           <h2>Đội ngũ phát triển</h2>
@@ -114,7 +114,7 @@ export default function AboutPage() {
             </article>
           ))}
         </div>
-      </section>
+      </section> */}
 
      
     </section>
