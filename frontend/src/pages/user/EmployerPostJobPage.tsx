@@ -160,6 +160,7 @@ export default function EmployerPostJobPage() {
   const [addressFeedback, setAddressFeedback] = useState("");
   const [transferNoticeOpen, setTransferNoticeOpen] = useState(false);
 
+  // 1. Tải danh mục và thông tin người dùng ban đầu
   useEffect(() => {
     platformApi.getUserHome().then((data) => {
       setCategories(data.categories);
@@ -181,6 +182,7 @@ export default function EmployerPostJobPage() {
       .catch((reason: Error) => setAddressFeedback(reason.message));
   }, []);
 
+  // 2. SỬA LỖI ĐỒNG BỘ: Đổ dữ liệu chi tiết công việc khi có jobCode từ URL
   useEffect(() => {
     if (!jobCode) {
       return;
@@ -191,8 +193,10 @@ export default function EmployerPostJobPage() {
       setSelectedCategoryCode(detail.categoryCode);
       setSelectedVariantCode(queryVariantCode || detail.serviceVariants[0]?.code || "");
     }).catch((reason: Error) => setFeedback(reason.message));
-  }, [jobCode, queryVariantCode]);
+  // Thêm categories vào danh sách phụ thuộc để đảm bảo đồng bộ khi danh mục load xong
+  }, [jobCode, queryVariantCode, categories]);
 
+  // 3. Tự động nhận diện công việc khi người dùng tự chọn Category bằng tay (chỉ chạy khi không có jobCode)
   useEffect(() => {
     if (jobCode || !selectedCategoryCode || !jobs.length) {
       return;
@@ -445,7 +449,8 @@ export default function EmployerPostJobPage() {
                     }}
                     disabled={Boolean(jobCode)}
                   >
-                    <option value="">Chọn loại dịch vụ</option>
+                    {/* SỬA ĐỔI HIỂN THỊ: Nếu đi từ URL có jobCode thì không hiện option rỗng "Chọn loại dịch vụ" */}
+                    {!jobCode && <option value="">Chọn loại dịch vụ</option>}
                     {categories.map((category) => (
                       <option key={category.code} value={category.code}>
                         {viText(category.name)}
