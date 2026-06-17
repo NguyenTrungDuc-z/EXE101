@@ -127,7 +127,6 @@ export default function EmployerPostJobPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const jobCode = searchParams.get("jobCode") ?? "";
-  const queryQuantity = Math.max(1, Number(searchParams.get("quantity") ?? 1));
   const queryVariantCode = searchParams.get("variantCode") ?? "";
   const queryMachineType = searchParams.get("machineType") ?? "";
   const queryUnitPrice = Number(searchParams.get("unitPrice") ?? 0);
@@ -141,7 +140,6 @@ export default function EmployerPostJobPage() {
   const [jobDetail, setJobDetail] = useState<JobDetail | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [selectedCategoryCode, setSelectedCategoryCode] = useState("");
-  const [quantity, setQuantity] = useState(queryQuantity);
   const [selectedVariantCode, setSelectedVariantCode] = useState(queryVariantCode);
   const [selectedDay, setSelectedDay] = useState(() => toDateValue(new Date()));
   const [selectedTime, setSelectedTime] = useState("");
@@ -191,10 +189,9 @@ export default function EmployerPostJobPage() {
     platformApi.getUserJobDetail(jobCode).then((detail) => {
       setJobDetail(detail);
       setSelectedCategoryCode(detail.categoryCode);
-      setQuantity(queryQuantity);
       setSelectedVariantCode(queryVariantCode || detail.serviceVariants[0]?.code || "");
     }).catch((reason: Error) => setFeedback(reason.message));
-  }, [jobCode, queryQuantity, queryVariantCode]);
+  }, [jobCode, queryVariantCode]);
 
   useEffect(() => {
     if (jobCode || !selectedCategoryCode || !jobs.length) {
@@ -281,9 +278,9 @@ export default function EmployerPostJobPage() {
   const rangePriceMin = selectedVariant?.priceMin ?? (queryPriceMin || unitPrice);
   const rangePriceMax = selectedVariant?.priceMax ?? (queryPriceMax || unitPrice);
   const isRangePrice = pricingType === "range";
-  const subtotal = unitPrice * quantity;
-  const rangeSubtotalMin = rangePriceMin * quantity;
-  const rangeSubtotalMax = rangePriceMax * quantity;
+  const subtotal = unitPrice;
+  const rangeSubtotalMin = rangePriceMin;
+  const rangeSubtotalMax = rangePriceMax;
   const serviceFee = Math.round(subtotal * 0.05);
   const tax = Math.round(subtotal * 0.0273);
   const total = subtotal + serviceFee + tax;
@@ -338,7 +335,7 @@ export default function EmployerPostJobPage() {
         totalAmount: total,
         paymentMethod,
         address,
-        quantity,
+        quantity: 1,
         machineType: isRangePrice ? `${machineType} (${formatCurrency(rangePriceMin)} - ${formatCurrency(rangePriceMax)} / ${unitLabel})` : machineType
       });
 
@@ -453,14 +450,6 @@ export default function EmployerPostJobPage() {
                       <option key={category.code} value={category.code}>
                         {viText(category.name)}
                       </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Số lượng {unitLabel}
-                  <select value={quantity} onChange={(event) => setQuantity(Number(event.target.value))}>
-                    {[1, 2, 3, 4, 5].map((item) => (
-                      <option key={item} value={item}>{item} {unitLabel}</option>
                     ))}
                   </select>
                 </label>
@@ -602,7 +591,7 @@ export default function EmployerPostJobPage() {
           <aside className="booking-summary-card">
             <h2>Tóm tắt đơn hàng</h2>
             <div className="summary-lines">
-              <span>{viText(jobDetail?.title ?? selectedCategory?.name)} (x{quantity})</span>
+              <span>{viText(jobDetail?.title ?? selectedCategory?.name)}</span>
               <strong>{isRangePrice ? `${formatCurrency(rangeSubtotalMin)} - ${formatCurrency(rangeSubtotalMax)}` : formatCurrency(subtotal)}</strong>
               <span>Đơn giá</span>
               <strong>{isRangePrice ? `${formatCurrency(rangePriceMin)} - ${formatCurrency(rangePriceMax)} / ${unitLabel}` : `${formatCurrency(unitPrice)} / ${unitLabel}`}</strong>
