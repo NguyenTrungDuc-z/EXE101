@@ -27,7 +27,7 @@ export default function PartnerPage() {
     <section className="partner-page">
       <div className="partner-hero">
         <div className="partner-hero-copy">
-          <span className="eyebrow">Trở thành đối tác</span>
+          <span className="eyebrow">Trở thành cộng tác viên</span>
           <h1>Mở rộng lịch làm việc cùng khách hàng ViecNhanh.</h1>
           <p>
             Đăng ký hồ sơ kỹ thuật viên hoặc đội dịch vụ để nhận yêu cầu phù hợp theo khu vực,

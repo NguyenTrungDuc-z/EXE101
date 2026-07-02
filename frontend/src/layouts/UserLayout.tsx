@@ -9,7 +9,7 @@ const links = [
   { to: "/user/jobs", label: "Dịch vụ" },
   { to: "/help", label: "Trợ giúp" },
   { to: "/about", label: "Về chúng tôi" },
-  { to: "/partner", label: "Trở thành đối tác" },
+  { to: "/partner", label: "Trở thành cộng tác viên" },
   { to: "/login", label: "Đăng nhập", authOnly: false },
   { to: "/booking", label: "Đặt lịch ngay" }
 ];

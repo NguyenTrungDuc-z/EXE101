@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { platformApi } from "../../api/platformApi";
 import { DEMO_CANDIDATE_CODE } from "../../config";
 import type { Category, CheckoutInfo, Job, JobDetail, Order, UserProfile } from "../../types/platform";
-import { viText } from "../../utils/vietnameseText";
+
 
 const AUTH_STORAGE_KEY = "homeswift_user";
 const BANK_INFO = {
@@ -40,167 +40,125 @@ const timeSlots = [
   "18:00 - 20:00"
 ];
 
-function readStoredUserCode() {
-  const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-  if (!raw) {
-    return DEMO_CANDIDATE_CODE;
-  }
-
-  try {
-    return JSON.parse(raw)?.code ?? DEMO_CANDIDATE_CODE;
-  } catch {
-    return DEMO_CANDIDATE_CODE;
-  }
+function formatCurrency(v: number) {
+  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(v);
 }
 
 function parseBudget(label?: string) {
-  const firstNumber = label?.match(/\d+/)?.[0];
-  return firstNumber ? Number(firstNumber) * 1000 : 150000;
-}
-
-function formatCurrency(value: number) {
-  return `${value.toLocaleString("vi-VN")}đ`;
-}
-
-function buildBankQrUrl(amount: number, transferContent: string) {
-  const qrParams = new URLSearchParams({
-    amount: String(amount),
-    addInfo: transferContent,
-    accountName: BANK_INFO.accountName
-  });
-
-  return `https://img.vietqr.io/image/${BANK_INFO.bankBin}-${BANK_INFO.accountNumber}-compact2.png?${qrParams.toString()}`;
-}
-
-function toDateValue(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function buildServiceDays() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  return Array.from({ length: 14 }).map((_, index) => {
-    const date = new Date(today);
-    date.setDate(today.getDate() + index);
-    return {
-      value: toDateValue(date),
-      day: date.getDate(),
-      label: date.toLocaleDateString("vi-VN", { weekday: "short" }),
-      fullLabel: date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })
-    };
-  });
-}
-
-function getSlotStart(slot: string) {
-  const [hour = "0", minute = "0"] = slot.split(" - ")[0].split(":");
-  return { hour: Number(hour), minute: Number(minute) };
-}
-
-function isPastSlot(dateValue: string, slot: string) {
-  const now = new Date();
-  const { hour, minute } = getSlotStart(slot);
-  const slotDate = new Date(`${dateValue}T00:00:00`);
-  slotDate.setHours(hour, minute, 0, 0);
-  return slotDate.getTime() <= now.getTime();
-}
-
-function toScheduledAt(dateValue: string, slot: string) {
-  const { hour, minute } = getSlotStart(slot);
-  const date = new Date(`${dateValue}T00:00:00`);
-  date.setHours(hour, minute, 0, 0);
-  return date.toISOString();
-}
-
-async function fetchAddressJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${PROVINCES_API}${path}`);
-  if (!response.ok) {
-    throw new Error("Không tải được dữ liệu địa chỉ từ provinces.open-api.vn.");
-  }
-  return response.json() as Promise<T>;
+  if (!label) return 0;
+  const cleaned = label.replace(/[^\d]/g, "");
+  return cleaned ? parseInt(cleaned, 10) : 0;
 }
 
 export default function EmployerPostJobPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const jobCode = searchParams.get("jobCode") ?? "";
-  const queryVariantCode = searchParams.get("variantCode") ?? "";
-  const queryMachineType = searchParams.get("machineType") ?? "";
-  const queryUnitPrice = Number(searchParams.get("unitPrice") ?? 0);
-  const queryPricingType = searchParams.get("pricingType") ?? "fixed";
-  const queryPriceMin = Number(searchParams.get("priceMin") ?? 0);
-  const queryPriceMax = Number(searchParams.get("priceMax") ?? 0);
-  const userCode = readStoredUserCode();
+  const jobCode = searchParams.get("jobCode") || "";
+  const queryVariantCode = searchParams.get("variantCode") || "";
+  const queryUnitPrice = parseBudget(searchParams.get("unitPrice") || "");
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [jobDetail, setJobDetail] = useState<JobDetail | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+
   const [selectedCategoryCode, setSelectedCategoryCode] = useState("");
-  const [selectedVariantCode, setSelectedVariantCode] = useState(queryVariantCode);
-  const [selectedDay, setSelectedDay] = useState(() => toDateValue(new Date()));
-  const [selectedTime, setSelectedTime] = useState("");
-  const [addressMode, setAddressMode] = useState<"saved" | "new">("new");
-  const [selectedAddress, setSelectedAddress] = useState("");
-  const [selectedCity, setSelectedCity] = useState("");
+  const [jobDetail, setJobDetail] = useState<JobDetail | null>(null);
+  const [selectedVariantCode, setSelectedVariantCode] = useState("");
+
+  const [provinces, setProvinces] = useState<ProvinceOption[]>([]);
+  const [districts, setDistricts] = useState<DistrictOption[]>([]);
+  const [wards, setWards] = useState<WardOption[]>([]);
+
+  const [selectedProvince, setSelectedProvince] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedWard, setSelectedWard] = useState("");
-  const [provinceOptions, setProvinceOptions] = useState<ProvinceOption[]>([]);
-  const [districtOptions, setDistrictOptions] = useState<DistrictOption[]>([]);
-  const [wardOptions, setWardOptions] = useState<WardOption[]>([]);
-  const [newAddress, setNewAddress] = useState("");
-  const [voucher, setVoucher] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
-  const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
-  const [checkout, setCheckout] = useState<CheckoutInfo | null>(null);
-  const [feedback, setFeedback] = useState("");
-  const [addressFeedback, setAddressFeedback] = useState("");
-  const [transferNoticeOpen, setTransferNoticeOpen] = useState(false);
+  const [addressLine, setAddressLine] = useState("");
 
-  // 1. Tải danh mục và thông tin người dùng ban đầu
+  const [startDateStr, setStartDateStr] = useState("");
+  const [startTimeSlot, setStartTimeSlot] = useState(timeSlots[0]);
+  const [note, setNote] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"wallet" | "bank_transfer">("wallet");
+  const [feedback, setFeedback] = useState("");
+
+  useEffect(() => {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) {
+      navigate("/login");
+      return;
+    }
+    const parsed = JSON.parse(raw);
+    if (parsed.role !== "employer") {
+      navigate("/");
+      return;
+    }
+    platformApi.getProfile().then(setProfile).catch(() => navigate("/login"));
+  }, [navigate]);
+
   useEffect(() => {
     platformApi.getUserHome().then((data) => {
-      setCategories(data.categories);
-    });
-    platformApi.getUserJobs().then(setJobs).catch((reason: Error) => setFeedback(reason.message));
-    platformApi.getUserProfile(userCode).then((data) => {
-      setProfile(data);
-      const firstAddress = data.savedAddresses[0] || data.address;
-      if (firstAddress) {
-        setSelectedAddress(firstAddress);
-        setAddressMode("saved");
-      }
-    });
-  }, [userCode]);
-
-  useEffect(() => {
-    fetchAddressJson<ProvinceOption[]>("/p/")
-      .then(setProvinceOptions)
-      .catch((reason: Error) => setAddressFeedback(reason.message));
+      setCategories(data.categories || []);
+      setJobs(data.featuredJobs || []);
+    }).catch((r: Error) => setFeedback(r.message));
   }, []);
 
-  // 2. SỬA LỖI ĐỒNG BỘ: Đổ dữ liệu chi tiết công việc khi có jobCode từ URL
   useEffect(() => {
-    if (!jobCode) {
+    fetch(`${PROVINCES_API}/p/`).then((r) => r.json()).then(setProvinces).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!selectedProvince) {
+      setDistricts([]);
+      setWards([]);
+      setSelectedDistrict("");
+      setSelectedWard("");
       return;
     }
+    fetch(`${PROVINCES_API}/p/${selectedProvince}?depth=2`)
+      .then((r) => r.json())
+      .then((data) => setDistricts(data.districts || []))
+      .catch(() => {});
+    setSelectedDistrict("");
+    setSelectedWard("");
+  }, [selectedProvince]);
 
-    platformApi.getUserJobDetail(jobCode).then((detail) => {
-      setJobDetail(detail);
-      setSelectedCategoryCode(detail.categoryCode);
-      setSelectedVariantCode(queryVariantCode || detail.serviceVariants[0]?.code || "");
-    }).catch((reason: Error) => setFeedback(reason.message));
-  // Thêm categories vào danh sách phụ thuộc để đảm bảo đồng bộ khi danh mục load xong
-  }, [jobCode, queryVariantCode, categories]);
-
-  // 3. Tự động nhận diện công việc khi người dùng tự chọn Category bằng tay (chỉ chạy khi không có jobCode)
   useEffect(() => {
-    if (jobCode || !selectedCategoryCode || !jobs.length) {
+    if (!selectedDistrict) {
+      setWards([]);
+      setSelectedWard("");
       return;
     }
+    fetch(`${PROVINCES_API}/d/${selectedDistrict}?depth=2`)
+      .then((r) => r.json())
+      .then((data) => setWards(data.wards || []))
+      .catch(() => {});
+    setSelectedWard("");
+  }, [selectedDistrict]);
+
+  const selectedCategory = useMemo(() => {
+    return categories.find((c) => c.code === selectedCategoryCode) || null;
+  }, [categories, selectedCategoryCode]);
+
+  useEffect(() => {
+    if (jobCode) {
+      platformApi.getUserJobDetail(jobCode).then((detail) => {
+        setJobDetail(detail);
+        setSelectedCategoryCode(detail.categoryCode);
+        setSelectedVariantCode(queryVariantCode || detail.serviceVariants[0]?.code || "");
+        const loc = detail.location || "";
+        const segments = loc.split(",").map((s) => s.trim());
+        if (segments.length >= 4) {
+          setAddressLine(segments.slice(0, segments.length - 3).join(", "));
+        } else {
+          setAddressLine(loc);
+        }
+      }).catch((reason: Error) => setFeedback(reason.message));
+    } else if (categories.length > 0 && !selectedCategoryCode) {
+      setSelectedCategoryCode(categories[0].code);
+    }
+  }, [jobCode, categories, queryVariantCode]);
+
+  useEffect(() => {
+    if (jobCode || !selectedCategoryCode || !jobs.length) return;
 
     const matchedJob = jobs.find((job) => job.categoryCode === selectedCategoryCode);
     if (!matchedJob) {
@@ -211,446 +169,311 @@ export default function EmployerPostJobPage() {
 
     platformApi.getUserJobDetail(matchedJob.code).then((detail) => {
       setJobDetail(detail);
-      setSelectedVariantCode(detail.serviceVariants[0]?.code || "");
+      const fallbackVariants = selectedCategory?.serviceVariants ?? [];
+      setSelectedVariantCode(
+        queryVariantCode || detail.serviceVariants[0]?.code || fallbackVariants[0]?.code || ""
+      );
     }).catch((reason: Error) => setFeedback(reason.message));
-  }, [jobCode, jobs, selectedCategoryCode]);
+  }, [jobCode, jobs, selectedCategoryCode, queryVariantCode, selectedCategory]);
 
-  const serviceDays = useMemo(() => buildServiceDays(), []);
-  const availableTimeSlots = useMemo(
-    () => timeSlots.filter((slot) => !isPastSlot(selectedDay, slot)),
-    [selectedDay]
-  );
-
-  useEffect(() => {
-    if (!availableTimeSlots.length) {
-      setSelectedTime("");
-      return;
+  const serviceVariants = useMemo(() => {
+    if (jobDetail?.serviceVariants && jobDetail.serviceVariants.length > 0) {
+      return jobDetail.serviceVariants;
     }
+    return selectedCategory?.serviceVariants ?? [];
+  }, [jobDetail, selectedCategory]);
 
-    setSelectedTime((current) => availableTimeSlots.includes(current) ? current : availableTimeSlots[0]);
-  }, [availableTimeSlots]);
+  const selectedVariant = useMemo(() => {
+    return serviceVariants.find((item) => item.code === selectedVariantCode) || serviceVariants[0] || null;
+  }, [serviceVariants, selectedVariantCode]);
 
-  useEffect(() => {
-    setSelectedDistrict("");
-    setSelectedWard("");
-    setDistrictOptions([]);
-    setWardOptions([]);
+  const unitPrice = useMemo(() => {
+    return selectedVariant?.price ?? (jobDetail ? (queryUnitPrice || jobDetail.budgetMin || parseBudget(selectedCategory?.averageBudgetLabel)) : 0);
+  }, [selectedVariant, jobDetail, queryUnitPrice, selectedCategory]);
 
-    if (!selectedCity) {
-      return;
-    }
-
-    fetchAddressJson<{ districts: DistrictOption[] }>(`/p/${selectedCity}?depth=2`)
-      .then((data) => setDistrictOptions(data.districts ?? []))
-      .catch((reason: Error) => setAddressFeedback(reason.message));
-  }, [selectedCity]);
-
-  useEffect(() => {
-    setSelectedWard("");
-    setWardOptions([]);
-
-    if (!selectedDistrict) {
-      return;
-    }
-
-    fetchAddressJson<{ wards: WardOption[] }>(`/d/${selectedDistrict}?depth=2`)
-      .then((data) => setWardOptions(data.wards ?? []))
-      .catch((reason: Error) => setAddressFeedback(reason.message));
-  }, [selectedDistrict]);
-
-  const selectedCategory = useMemo(
-    () => categories.find((category) => category.code === selectedCategoryCode),
-    [categories, selectedCategoryCode]
-  );
-
-  const selectedProvinceName = provinceOptions.find((item) => String(item.code) === selectedCity)?.name ?? "";
-  const selectedDistrictName = districtOptions.find((item) => String(item.code) === selectedDistrict)?.name ?? "";
-  const selectedWardName = wardOptions.find((item) => String(item.code) === selectedWard)?.name ?? "";
-  const newAddressErrors = {
-    city: addressMode === "new" && !selectedCity ? "Vui lòng chọn tỉnh/thành phố." : "",
-    district: addressMode === "new" && !selectedDistrict ? "Vui lòng chọn quận/huyện." : "",
-    ward: addressMode === "new" && !selectedWard ? "Vui lòng chọn phường/xã." : "",
-    street: addressMode === "new" && !newAddress.trim() ? "Vui lòng nhập địa chỉ cụ thể." : ""
-  };
-  const savedAddresses = profile?.savedAddresses ?? [];
-  const unitLabel = jobDetail?.unitLabel ?? "dich vu";
-  const serviceVariants = jobDetail?.serviceVariants ?? [];
-  const selectedVariant = serviceVariants.find((item) => item.code === selectedVariantCode) ?? serviceVariants[0];
-  const pricingType = selectedVariant?.pricingType ?? queryPricingType;
-  const machineType = selectedVariant?.name ?? (queryMachineType || "");
-  const unitPrice = selectedVariant?.price ?? (jobDetail ? (queryUnitPrice || jobDetail.budgetMin || parseBudget(selectedCategory?.averageBudgetLabel)) : 0);
-  const rangePriceMin = selectedVariant?.priceMin ?? (queryPriceMin || unitPrice);
-  const rangePriceMax = selectedVariant?.priceMax ?? (queryPriceMax || unitPrice);
-  const isRangePrice = pricingType === "range";
   const subtotal = unitPrice;
-  const rangeSubtotalMin = rangePriceMin;
-  const rangeSubtotalMax = rangePriceMax;
   const serviceFee = Math.round(subtotal * 0.05);
-  const tax = Math.round(subtotal * 0.0273);
+  const tax = Math.round(subtotal * 0.02);
   const total = subtotal + serviceFee + tax;
-  const address = addressMode === "saved" ? selectedAddress : `${newAddress.trim()}, ${selectedWardName}, ${selectedDistrictName}, ${selectedProvinceName}`;
-  const hasNewAddressError = Boolean(newAddressErrors.city || newAddressErrors.district || newAddressErrors.ward || newAddressErrors.street);
-  const previewTransferContent = "HOMESWIFT TAO DON";
-  const previewQrUrl = buildBankQrUrl(total, previewTransferContent);
-  const variantPriceLabel = (variant: typeof serviceVariants[number]) => {
-    if (variant.pricingType === "range") {
-      return `${variant.name} (${formatCurrency(variant.priceMin ?? 0)} - ${formatCurrency(variant.priceMax ?? 0)})`;
-    }
-    return `${variant.name} (${formatCurrency(variant.price ?? 0)})`;
-  };
 
-  const submitBooking = async (event: FormEvent) => {
-    event.preventDefault();
+  const fullLocation = useMemo(() => {
+    const pLabel = provinces.find((p) => String(p.code) === selectedProvince)?.name || "";
+    const dLabel = districts.find((d) => String(d.code) === selectedDistrict)?.name || "";
+    const wLabel = wards.find((w) => String(w.code) === selectedWard)?.name || "";
+    return [addressLine, wLabel, dLabel, pLabel].filter(Boolean).join(", ");
+  }, [addressLine, selectedProvince, selectedDistrict, selectedWard, provinces, districts, wards]);
+
+  const previewQrUrl = useMemo(() => {
+    const memoText = `DAT_LICH_${selectedCategoryCode}_${selectedVariantCode || "DEFAULT"}`.toUpperCase();
+    return `https://api.vietqr.io/image/${BANK_INFO.bankBin}-${BANK_INFO.accountNumber}-qr_only.png?amount=${total}&addInfo=${encodeURIComponent(memoText)}&accountName=${encodeURIComponent(BANK_INFO.accountName)}`;
+  }, [selectedCategoryCode, selectedVariantCode, total]);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
     setFeedback("");
-
-    if (!selectedCategory) {
-      setFeedback("Vui lòng chọn loại dịch vụ.");
+    if (!profile) return;
+    if (!fullLocation) {
+      setFeedback("Vui lòng nhập địa chỉ cụ thể");
       return;
     }
-
-    if (!jobDetail) {
-      setFeedback("Vui long chon loai dich vu hop le truoc khi thanh toan.");
-      return;
-    }
-
-    if (serviceVariants.length && !selectedVariant) {
-      setFeedback("Vui long chon loai may/dich vu.");
-      return;
-    }
-
-    if (!selectedTime) {
-      setFeedback("Vui lòng chọn khung giờ còn khả dụng.");
-      return;
-    }
-
-    if ((addressMode === "saved" && !selectedAddress) || (addressMode === "new" && hasNewAddressError)) {
-      setFeedback("Vui lòng nhập đầy đủ địa chỉ dịch vụ trước khi thanh toán.");
-      setAddressMode("new");
+    if (!startDateStr) {
+      setFeedback("Vui lòng chọn ngày thực hiện");
       return;
     }
 
     try {
-      const sourceJobCode = jobDetail.code;
+      let finalJobCode = jobCode;
+      if (!finalJobCode) {
+        const createdJob = await platformApi.createUserJob({
+          title: `Đặt lịch ${selectedCategory?.name || "Dịch vụ"}`,
+          categoryCode: selectedCategoryCode,
+          location: fullLocation,
+          salaryLabel: formatCurrency(unitPrice),
+          budgetMin: unitPrice,
+          budgetMax: unitPrice,
+          employmentType: "one_time",
+          urgency: "normal",
+          summary: note || `Yêu cầu dịch vụ đặt nhanh cho gói ${selectedVariant?.name || "mặc định"}`,
+          requirements: [{ text: "Gói dịch vụ đã chọn", value: selectedVariant?.name || "Mặc định" }],
+          serviceVariants: serviceVariants,
+          startDate: `${startDateStr}T${startTimeSlot.split(" ")[0]}:00`
+        });
+        finalJobCode = createdJob.code;
+      }
 
-      const result = await platformApi.createUserOrder({
-        userCode,
-        jobCode: sourceJobCode,
-        scheduledAt: toScheduledAt(selectedDay, selectedTime),
-        totalAmount: total,
+      const checkoutPayload: CheckoutInfo = {
+        jobCode: finalJobCode,
+        candidateCode: DEMO_CANDIDATE_CODE,
         paymentMethod,
-        address,
-        quantity: 1,
-        machineType: isRangePrice ? `${machineType} (${formatCurrency(rangePriceMin)} - ${formatCurrency(rangePriceMax)} / ${unitLabel})` : machineType
-      });
+        subtotal,
+        serviceFee,
+        tax,
+        total
+      };
 
-      setCreatedOrder(result.order);
-      setCheckout(result.checkout);
-      const updatedProfile = await platformApi.getUserProfile(userCode);
-      setProfile(updatedProfile);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ ...(JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) || "{}")), ...updatedProfile }));
-      window.dispatchEvent(new Event("homeswift-auth"));
-      setFeedback(result.checkout ? "Đơn đã được tạo. Vui lòng quét QR để thanh toán." : "Đã xác nhận đặt lịch. Đơn đang chờ hệ thống điều phối thợ.");
-    } catch (reason) {
-      setFeedback((reason as Error).message);
+      const order: Order = await platformApi.createOrderCheckout(checkoutPayload);
+      navigate(`/employer/orders?highlight=${order.code}`);
+    } catch (err: any) {
+      setFeedback(err.message || "Không thể hoàn tất đặt lịch");
     }
   };
-
-  const confirmTransferred = async () => {
-    if (!createdOrder) {
-      return;
-    }
-
-    try {
-      const updatedOrder = await platformApi.markOrderTransferred(createdOrder.code);
-      setCreatedOrder(updatedOrder);
-      setTransferNoticeOpen(true);
-    } catch (reason) {
-      setFeedback((reason as Error).message);
-    }
-  };
-
-  if (checkout && createdOrder) {
-    return (
-      <div className="booking-page">
-        <section className="booking-shell checkout-shell">
-          <h1>Thanh toán chuyển khoản</h1>
-          <div className="checkout-grid">
-            <article className="checkout-qr-card">
-              <img 
-                src={checkout.qrUrl} 
-                alt={`QR thanh toán đơn ${createdOrder.code}`} 
-                crossOrigin="anonymous"
-              />
-              <div>
-                <span>Số tiền</span>
-                <strong>{formatCurrency(createdOrder.totalAmount)}</strong>
-              </div>
-            </article>
-
-            <article className="checkout-info-card">
-              <h2>Thông tin chuyển khoản</h2>
-              <p>Ngân hàng: <b>{checkout.bankName}</b></p>
-              <p>Số tài khoản: <b>{checkout.accountNumber}</b></p>
-              <p>Chủ tài khoản: <b>{checkout.accountName}</b></p>
-              <p>Nội dung: <b>{checkout.transferContent}</b></p>
-              <div className="escrow-note">
-                ViecNhanh sẽ giữ an toàn khoản tiền này. Tiền chỉ được chuyển cho thợ sau khi bạn nghiệm thu và hài lòng.
-              </div>
-              <button className="button primary booking-submit" type="button" onClick={confirmTransferred}>
-                Tôi đã chuyển khoản
-              </button>
-              {feedback ? <p className="booking-feedback">{feedback}</p> : null}
-              {transferNoticeOpen ? (
-                <div className="otp-modal-backdrop" role="dialog" aria-modal="true">
-                  <div className="otp-modal">
-                    <button
-                      type="button"
-                      aria-label="Đóng thông báo"
-                      onClick={() => navigate("/")}
-                      style={{ marginLeft: "auto", border: 0, background: "transparent", fontSize: 22, cursor: "pointer" }}
-                    >
-                      ×
-                    </button>
-                    <h2>Đã ghi nhận chuyển khoản</h2>
-                    <p>HomeSwift đã ghi nhận bạn đã chuyển khoản. Admin cần thời gian kiểm tra và duyệt tiền trước khi điều phối thợ.</p>
-                    <button className="button primary" type="button" onClick={() => navigate("/")}>
-                      Về trang chủ
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </article>
-          </div>
-        </section>
-      </div>
-    );
-  }
 
   return (
-    <div className="booking-page">
-      <section className="booking-shell">
-        <h1>Thanh toán & Đặt lịch</h1>
+    <section className="booking-container">
+      <header className="booking-header">
+        <h1>Đặt lịch dịch vụ nhanh</h1>
+        <p>Chọn giải pháp phù hợp nhất cho không gian sống của bạn</p>
+      </header>
 
-        <form className="booking-layout" onSubmit={submitBooking}>
-          <div className="booking-config">
-            <h2>Cấu hình đơn hàng</h2>
+      <form className="booking-layout" onSubmit={handleSubmit}>
+        <main className="booking-main-content">
+          <fieldset className="booking-card">
+            <legend>Loại dịch vụ &amp; Gói cấu hình</legend>
+            <div className="form-group">
+              <label>Danh mục dịch vụ</label>
+              <select
+                value={selectedCategoryCode}
+                onChange={(e) => {
+                  setSelectedCategoryCode(e.target.value);
+                  setJobDetail(null);
+                  setSelectedVariantCode("");
+                }}
+                disabled={Boolean(jobCode)}
+              >
+                {categories.map((cat) => (
+                  <option key={cat.code} value={cat.code}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <section className="booking-step">
-              <h3>Bước 1 - Chi tiết công việc</h3>
-              <div className="booking-field-grid">
-                <label>
-                  Loại dịch vụ
-                  <select
-                    value={selectedCategoryCode}
-                    onChange={(event) => {
-                      setSelectedCategoryCode(event.target.value);
-                      setJobDetail(null);
-                      setSelectedVariantCode("");
-                    }}
-                    disabled={Boolean(jobCode)}
-                  >
-                    {/* SỬA ĐỔI HIỂN THỊ: Nếu đi từ URL có jobCode thì không hiện option rỗng "Chọn loại dịch vụ" */}
-                    {!jobCode && <option value="">Chọn loại dịch vụ</option>}
-                    {categories.map((category) => (
-                      <option key={category.code} value={category.code}>
-                        {viText(category.name)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Loại {unitLabel}
-                  <select
-                    value={selectedVariantCode}
-                    onChange={(event) => setSelectedVariantCode(event.target.value)}
-                    disabled={!serviceVariants.length}
-                  >
-                    <option value="">Chọn loại {unitLabel}</option>
-                    {serviceVariants.map((variant) => (
-                      <option key={variant.code} value={variant.code}>
-                        {variantPriceLabel(variant)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </section>
-
-            <section className="booking-step">
-              <h3>Bước 2 - Thời gian thực hiện</h3>
-              <div className="schedule-grid">
-                <div className="calendar-card">
-                  <div className="calendar-head">
-                    <strong>Chọn ngày dịch vụ</strong>
-                  </div>
-                  <div className="calendar-grid booking-date-grid">
-                    {serviceDays.map((day) => (
-                      <button
-                        key={day.value}
-                        type="button"
-                        className={day.value === selectedDay ? "active" : ""}
-                        onClick={() => setSelectedDay(day.value)}
-                        title={day.fullLabel}
-                      >
-                        <span>{day.label}</span>
-                        <b>{day.day}</b>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="time-slots">
-                  <h4>Thời gian</h4>
-                  <div>
-                    {availableTimeSlots.length ? availableTimeSlots.map((slot) => (
-                      <button
-                        key={slot}
-                        type="button"
-                        className={slot === selectedTime ? "active" : ""}
-                        onClick={() => setSelectedTime(slot)}
-                      >
-                        {slot}
-                      </button>
-                    )) : <p>Hôm nay không còn khung giờ phù hợp.</p>}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="booking-step">
-              <h3>Bước 3 - Địa điểm dịch vụ</h3>
-              <div className="address-options">
-                <span>Địa chỉ dịch vụ</span>
-                {savedAddresses.length ? (
-                  savedAddresses.map((item) => (
-                    <label key={item}>
+            {serviceVariants.length > 0 ? (
+              <div className="form-group">
+                <label>Các gói dịch vụ có sẵn</label>
+                <div className="variants-grid">
+                  {serviceVariants.map((item) => (
+                    <label
+                      key={item.code}
+                      className={`variant-card ${selectedVariantCode === item.code ? "active" : ""}`}
+                    >
                       <input
                         type="radio"
-                        checked={addressMode === "saved" && selectedAddress === item}
-                        onChange={() => {
-                          setAddressMode("saved");
-                          setSelectedAddress(item);
-                        }}
+                        name="service_variant"
+                        value={item.code}
+                        checked={selectedVariantCode === item.code}
+                        onChange={(e) => setSelectedVariantCode(e.target.value)}
                       />
-                      {item}
+                      <div className="variant-info">
+                        <span className="v-name">{item.name}</span>
+                        <span className="v-price">
+                          {item.pricingType === "range" ? "Từ " : ""}
+                          {formatCurrency(item.price)}
+                        </span>
+                      </div>
                     </label>
-                  ))
-                ) : <p>Chưa có địa chỉ đã lưu.</p>}
-                <label>
-                  <input
-                    type="radio"
-                    checked={addressMode === "new"}
-                    onChange={() => setAddressMode("new")}
-                  />
-                  Thêm địa chỉ mới
-                </label>
-                {addressMode === "new" ? (
-                  <div className="new-address-grid">
-                    <label>
-                      Tỉnh/Thành phố
-                      <select value={selectedCity} onChange={(event) => setSelectedCity(event.target.value)} aria-invalid={Boolean(newAddressErrors.city)}>
-                        <option value="">Chọn tỉnh/thành phố</option>
-                        {provinceOptions.map((city) => (
-                          <option key={city.code} value={city.code}>{city.name}</option>
-                        ))}
-                      </select>
-                      {newAddressErrors.city ? <small className="field-error">{newAddressErrors.city}</small> : null}
-                    </label>
-                    <label>
-                      Quận/Huyện
-                      <select value={selectedDistrict} onChange={(event) => setSelectedDistrict(event.target.value)} disabled={!selectedCity} aria-invalid={Boolean(newAddressErrors.district)}>
-                        <option value="">Chọn quận/huyện</option>
-                        {districtOptions.map((district) => (
-                          <option key={district.code} value={district.code}>{district.name}</option>
-                        ))}
-                      </select>
-                      {newAddressErrors.district ? <small className="field-error">{newAddressErrors.district}</small> : null}
-                    </label>
-                    <label>
-                      Phường/Xã
-                      <select value={selectedWard} onChange={(event) => setSelectedWard(event.target.value)} disabled={!selectedDistrict} aria-invalid={Boolean(newAddressErrors.ward)}>
-                        <option value="">Chọn phường/xã</option>
-                        {wardOptions.map((ward) => (
-                          <option key={ward.code} value={ward.code}>{ward.name}</option>
-                        ))}
-                      </select>
-                      {newAddressErrors.ward ? <small className="field-error">{newAddressErrors.ward}</small> : null}
-                    </label>
-                    <label>
-                      Địa chỉ cụ thể
-                      <input
-                        value={newAddress}
-                        onChange={(event) => setNewAddress(event.target.value)}
-                        placeholder="Số nhà, tên đường, tòa nhà..."
-                        aria-invalid={Boolean(newAddressErrors.street)}
-                      />
-                      {newAddressErrors.street ? <small className="field-error">{newAddressErrors.street}</small> : null}
-                    </label>
-                  </div>
-                ) : null}
-                {addressFeedback ? <small className="field-error">{addressFeedback}</small> : null}
+                  ))}
+                </div>
               </div>
-            </section>
+            ) : null}
+          </fieldset>
+
+          <fieldset className="booking-card">
+            <legend>Địa chỉ làm việc</legend>
+            <div className="address-selectors">
+              <div className="form-group">
+                <label>Tỉnh / Thành phố</label>
+                <select value={selectedProvince} onChange={(e) => setSelectedProvince(e.target.value)}>
+                  <option value="">-- Chọn Tỉnh/Thành phố --</option>
+                  {provinces.map((p) => (
+                    <option key={p.code} value={p.code}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Quận / Huyện</label>
+                <select
+                  value={selectedDistrict}
+                  onChange={(e) => setSelectedDistrict(e.target.value)}
+                  disabled={!selectedProvince}
+                >
+                  <option value="">-- Chọn Quận/Huyện --</option>
+                  {districts.map((d) => (
+                    <option key={d.code} value={d.code}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Phường / Xã</label>
+                <select
+                  value={selectedWard}
+                  onChange={(e) => setSelectedWard(e.target.value)}
+                  disabled={!selectedDistrict}
+                >
+                  <option value="">-- Chọn Phường/Xã --</option>
+                  {wards.map((w) => (
+                    <option key={w.code} value={w.code}>
+                      {w.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Số nhà, ngõ hẻm, tên đường cụ thể</label>
+              <input
+                type="text"
+                placeholder="Ví dụ: Số 123 Ngõ 45 Đường Cầu Giấy"
+                value={addressLine}
+                onChange={(e) => setAddressLine(e.target.value)}
+              />
+            </div>
+          </fieldset>
+
+          <fieldset className="booking-card">
+            <legend>Thời gian &amp; Ghi chú</legend>
+            <div className="datetime-row">
+              <div className="form-group">
+                <label>Ngày thực hiện</label>
+                <input type="date" value={startDateStr} onChange={(e) => setStartDateStr(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Khung giờ làm việc</label>
+                <select value={startTimeSlot} onChange={(e) => setStartTimeSlot(e.target.value)}>
+                  {timeSlots.map((slot) => (
+                    <option key={slot} value={slot}>
+                      {slot}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Ghi chú hoặc yêu cầu đặc biệt khác</label>
+              <textarea
+                rows={3}
+                placeholder="Nhập ghi chú cho thợ (Ví dụ: nhà có nuôi chó dữ, cần mang thêm cây lau nhà...)"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </div>
+          </fieldset>
+        </main>
+
+        <aside className="booking-sidebar">
+          <div className="booking-summary-panel">
+            <h3>Tóm tắt đơn hàng</h3>
+            <div className="summary-item">
+              <span>Gói dịch vụ</span>
+              <strong>{selectedVariant?.name || "Mặc định"}</strong>
+            </div>
+            <div className="summary-item">
+              <span>Đơn giá gói</span>
+              <span>{formatCurrency(unitPrice)}</span>
+            </div>
+            <hr />
+            <div className="summary-item">
+              <span>Tạm tính</span>
+              <span>{formatCurrency(subtotal)}</span>
+            </div>
+            <div className="summary-item">
+              <span>Phí nền tảng (5%)</span>
+              <span>{formatCurrency(serviceFee)}</span>
+            </div>
+            <div className="summary-item">
+              <span>Thuế tích hợp (2%)</span>
+              <span>{formatCurrency(tax)}</span>
+            </div>
+            <hr />
+            <div className="summary-item total-row">
+              <span>Tổng cộng thanh toán</span>
+              <span className="price-tag">{formatCurrency(total)}</span>
+            </div>
           </div>
 
-          <aside className="booking-summary-card">
-            <h2>Tóm tắt đơn hàng</h2>
-            <div className="summary-lines">
-              <span>{viText(jobDetail?.title ?? selectedCategory?.name)}</span>
-              <strong>{isRangePrice ? `${formatCurrency(rangeSubtotalMin)} - ${formatCurrency(rangeSubtotalMax)}` : formatCurrency(subtotal)}</strong>
-              <span>Đơn giá</span>
-              <strong>{isRangePrice ? `${formatCurrency(rangePriceMin)} - ${formatCurrency(rangePriceMax)} / ${unitLabel}` : `${formatCurrency(unitPrice)} / ${unitLabel}`}</strong>
-              <span>Phí dịch vụ</span>
-              <strong>{formatCurrency(serviceFee)}</strong>
-              <span>Thuế</span>
-              <strong>{formatCurrency(tax)}</strong>
-            </div>
-            <div className="summary-total">
-              <span>Tổng cộng</span>
-              <strong>{formatCurrency(total)}</strong>
-            </div>
-
-            <label className="voucher-field">
-              Mã giảm giá (Voucher)
-              <div>
-                <input
-                  value={voucher}
-                  onChange={(event) => setVoucher(event.target.value)}
-                  placeholder="Mã giảm giá"
-                />
-                <button type="button">Áp dụng</button>
-              </div>
-            </label>
-
-            <fieldset className="payment-methods">
-              <legend>Phương thức thanh toán</legend>
-              <label>
+          <aside className="payment-method-panel">
+            <h3>Phương thức thanh toán</h3>
+            <fieldset className="payment-options">
+              <label className={`payment-option-card ${paymentMethod === "wallet" ? "selected" : ""}`}>
                 <input
                   type="radio"
-                  name="payment"
-                  checked={paymentMethod === "bank_transfer"}
-                  onChange={() => setPaymentMethod("bank_transfer")}
-                />
-                Chuyển khoản QR ngân hàng
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="payment"
+                  name="payment_method"
+                  value="wallet"
                   checked={paymentMethod === "wallet"}
                   onChange={() => setPaymentMethod("wallet")}
                 />
-                Ví ViecNhanh ({formatCurrency(profile?.walletBalance ?? 0)})
+                <div>
+                  <span>Ví điện tử cá nhân</span>
+                  <small>Số dư khả dụng: {profile ? formatCurrency(profile.walletBalance) : "--"}</small>
+                </div>
+              </label>
+
+              <label className={`payment-option-card ${paymentMethod === "bank_transfer" ? "selected" : ""}`}>
+                <input
+                  type="radio"
+                  name="payment_method"
+                  value="bank_transfer"
+                  checked={paymentMethod === "bank_transfer"}
+                  onChange={() => setPaymentMethod("bank_transfer")}
+                />
+                <div>
+                  <span>Chuyển khoản Ngân hàng (VietQR)</span>
+                  <small>Quét mã chuyển khoản nhanh tự động nhận diện đơn</small>
+                </div>
               </label>
             </fieldset>
 
             {paymentMethod === "bank_transfer" ? (
               <article className="payment-qr-preview">
-                <img 
-                  src={previewQrUrl} 
-                  alt="QR chuyển khoản ngân hàng" 
-                  crossOrigin="anonymous"
-                />
+                <img src={previewQrUrl} alt="QR chuyển khoản ngân hàng" crossOrigin="anonymous" />
                 <div>
                   <span>Số tiền chuyển khoản</span>
                   <strong>{formatCurrency(total)}</strong>
@@ -664,8 +487,8 @@ export default function EmployerPostJobPage() {
             </button>
             {feedback ? <p className="booking-feedback">{feedback}</p> : null}
           </aside>
-        </form>
-      </section>
+        </aside>
+      </form>
 
       <footer className="home-footer booking-footer">
         <div>
@@ -690,6 +513,6 @@ export default function EmployerPostJobPage() {
           <span className="store-badge">Google Play</span>
         </div>
       </footer>
-    </div>
+    </section>
   );
 }

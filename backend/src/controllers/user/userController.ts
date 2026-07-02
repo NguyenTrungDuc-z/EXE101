@@ -54,7 +54,7 @@ const serviceCatalog = {
     coverImage: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1200&q=80",
     unitLabel: "ca",
     serviceVariants: [
-      { code: "basic", name: "Gói cơ bản", price: 250000, pricingType: "fixed" },
+      { code: "basic", name: "60m²", price: 250000, pricingType: "fixed" },
       { code: "deep", name: "Tổng vệ sinh", price: 450000, pricingType: "fixed" },
       { code: "other", name: "Khu vực khác", priceMin: 300000, priceMax: 800000, pricingType: "range" }
     ],
@@ -252,10 +252,17 @@ export async function getUserHome(_request: Request, response: Response) {
       totalCandidates: candidates,
       activeOrders: orders.filter((order) => ["payment_pending", "PENDING_ASSIGN", "PENDING_ACCEPT", "IN_PROGRESS", "COMPLETED_BY_TECHNICIAN"].includes(order.status)).length
     },
-    categories: categories.map((category) => ({
-      ...category,
-      openJobs: categoryCountMap.get(category.code) ?? 0
-    })),
+    categories: categories.map((category) => {
+      const catalog = serviceCatalog[category.code as keyof typeof serviceCatalog] || serviceCatalog.default;
+      return {
+        ...category,
+        openJobs: categoryCountMap.get(category.code) ?? 0,
+        coverImage: catalog.coverImage,
+        gallery: "gallery" in catalog ? catalog.gallery : [],
+        ratingLabel: catalog.ratingLabel,
+        serviceVariants: catalog.serviceVariants
+      };
+    }),
     featuredJobs: jobs.slice(0, 6),
     testimonials
   });
@@ -483,12 +490,6 @@ export async function createUserOrder(request: any, response: Response) {
     return;
   }
 
-  // Chặn Thợ tự đặt dịch vụ của chính mình
-  // if (user.code === job.employerCode) {
-  //   response.status(400).json({ message: "Bạn không thể tự đặt dịch vụ của chính mình." });
-  //   return;
-  // }
-
   if (paymentMethod === "wallet" && (user.walletBalance ?? 0) < amount) {
     response.status(400).json({ message: "Số dư ví không đủ để thanh toán." });
     return;
@@ -693,9 +694,7 @@ export async function completeUserOrder(request: Request, response: Response) {
   }
 
   const frozenAmount = order.frozenBalance || order.totalAmount;
-
-  // Random commission rate between 20% and 30%
-  const commissionRate = Math.floor(Math.random() * (30 - 20 + 1) + 20) / 100; // e.g. 0.20 to 0.30
+  const commissionRate = Math.floor(Math.random() * (30 - 20 + 1) + 20) / 100;
 
   const platformFee = Math.round(frozenAmount * commissionRate);
   const workerPayout = frozenAmount - platformFee;
@@ -705,7 +704,6 @@ export async function completeUserOrder(request: Request, response: Response) {
     worker.walletBalance = (worker.walletBalance ?? 0) + workerPayout;
     await worker.save();
 
-    // Create wallet transaction for worker earning
     await WalletTransactionModel.create({
       code: generateCode("WTR"),
       userCode: worker.code,

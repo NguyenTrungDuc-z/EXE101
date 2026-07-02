@@ -1,5 +1,10 @@
 import { Award, CheckCircle2, HeartHandshake, Lightbulb, ShieldCheck, Sparkles, Target, Users } from "lucide-react";
-
+import Linhimg from "../../../public/Ling.jpg";
+import Hungimg from "../../../public/Hungs.jpg";
+import Duyenimg from "../../../public/Duye.jpg";
+import Thuyimg from "../../../public/Thuyf.jpg";
+import Ducimg from "../../../public/Duc.jpg";
+import Danhimg from "../../../public/Danh.jpg";
 const coreValues = [
   { icon: ShieldCheck, title: "Tin cậy", description: "Giá cố định minh bạch, quy trình rõ ràng và bảo vệ quyền lợi khách hàng." },
   { icon: HeartHandshake, title: "Tận tâm", description: "Đội ngũ kỹ thuật viên được xác minh, phục vụ đúng giờ và theo sát phản hồi." },
@@ -11,12 +16,12 @@ const coreValues = [
 const defaultAvatar = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80";
 
 const leaders = [
-  { name: "Nguyễn Vũ Ngọc Linh", role: "Founder & Marketing Lead", image: defaultAvatar },
-  { name: "Nguyễn Việt Hùng", role: "Co-founder & Growth Marketing", image: defaultAvatar },
-  { name: "Phạm Thị Duyên", role: "Content Marketing & Branding", image: defaultAvatar },
-  { name: "Đào Thanh Thùy", role: "Customer Success & Operations", image: defaultAvatar },
-  { name: "Nguyễn Trung Đức", role: "FullStack Developer", image: defaultAvatar },
-  { name: "Hoàng Duy Anh", role: "FullStack Developer", image: defaultAvatar }
+  { name: "Nguyễn Vũ Ngọc Linh", role: "Founder & Marketing Lead", image: Linhimg },
+  { name: "Nguyễn Việt Hùng", role: "Co-founder & Growth Marketing", image: Hungimg },
+  { name: "Phạm Thị Duyên", role: "Content Marketing & Branding", image: Duyenimg },
+  { name: "Đào Thanh Thùy", role: "Customer Success & Operations", image: Thuyimg },
+  { name: "Nguyễn Trung Đức", role: "FullStack Developer", image: Ducimg },
+  { name: "Hoàng Duy Anh", role: "FullStack Developer", image: Danhimg }
 ];
 
 const numbers = [
